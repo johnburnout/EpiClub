@@ -2,10 +2,10 @@
 -- version 5.2.2
 -- https://www.phpmyadmin.net/
 --
--- Hôte : localhost
--- Généré le : mer. 02 juil. 2025 à 20:25
--- Version du serveur : 8.0.42
--- Version de PHP : 8.3.22
+-- Host: localhost
+-- Generation Time: Jul 03, 2025 at 11:42 AM
+-- Server version: 10.11.11-MariaDB-0+deb12u1
+-- PHP Version: 8.2.28
 
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
 START TRANSACTION;
@@ -18,102 +18,102 @@ SET time_zone = "+00:00";
 /*!40101 SET NAMES utf8mb4 */;
 
 --
--- Base de données : `epi`
+-- Database: `epi`
 --
 
 -- --------------------------------------------------------
 
 --
--- Structure de la table `categorie`
+-- Table structure for table `categorie`
 --
 
 CREATE TABLE `categorie` (
-  `id` int NOT NULL,
-  `libelle` varchar(20) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
+  `id` int(11) NOT NULL,
+  `libelle` varchar(20) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
 
 -- --------------------------------------------------------
 
 --
--- Structure de la table `fabricant`
+-- Table structure for table `fabricant`
 --
 
 CREATE TABLE `fabricant` (
-  `id` int NOT NULL,
+  `id` int(11) NOT NULL,
   `libelle` varchar(50) NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
 
 -- --------------------------------------------------------
 
 --
--- Structure de la table `facture`
+-- Table structure for table `facture`
 --
 
 CREATE TABLE `facture` (
-  `id` int NOT NULL,
+  `id` int(11) NOT NULL,
   `vendeur` varchar(30) NOT NULL,
   `date_facture` date DEFAULT NULL,
   `reference` varchar(15) DEFAULT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
 
 -- --------------------------------------------------------
 
 --
--- Doublure de structure pour la vue `fiche`
--- (Voir ci-dessous la vue réelle)
+-- Stand-in structure for view `fiche`
+-- (See below for the actual view)
 --
 CREATE TABLE `fiche` (
-`id` int
+`id` int(11)
 ,`ref` varchar(8)
-,`libelle` varchar(30)
+,`libelle` varchar(60)
 ,`categorie` varchar(20)
-,`categorie_id` int
+,`categorie_id` int(11)
 ,`fabricant` varchar(50)
-,`fabricant_id` int
+,`fabricant_id` int(11)
 ,`lieu` varchar(15)
-,`lieu_id` int
+,`lieu_id` int(11)
 ,`vendeur` varchar(30)
-,`facture_id` int
+,`facture_id` int(11)
 ,`date_facture` date
 ,`username` varchar(16)
-,`utilisateur_id` int
-,`nb_elements` int
+,`utilisateur_id` int(11)
+,`nb_elements` int(11)
 ,`date_max` date
 ,`date_debut` date
-,`verification_id` int
+,`verification_id` int(11)
 ,`date_verification` date
 ,`remarques` text
 ,`photo` varchar(50)
-,`nb_elements_initial` int
+,`nb_elements_initial` int(11)
 );
 
 -- --------------------------------------------------------
 
 --
--- Structure de la table `lieu`
+-- Table structure for table `lieu`
 --
 
 CREATE TABLE `lieu` (
-  `id` int NOT NULL,
-  `libelle` varchar(15) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
+  `id` int(11) NOT NULL,
+  `libelle` varchar(15) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
 
 -- --------------------------------------------------------
 
 --
--- Doublure de structure pour la vue `liste`
--- (Voir ci-dessous la vue réelle)
+-- Stand-in structure for view `liste`
+-- (See below for the actual view)
 --
 CREATE TABLE `liste` (
-`id` int
+`id` int(11)
 ,`ref` varchar(8)
-,`libelle` varchar(30)
+,`libelle` varchar(60)
 ,`fabricant` varchar(50)
 ,`categorie` varchar(20)
-,`categorie_id` int
+,`categorie_id` int(11)
 ,`lieu` varchar(15)
-,`lieu_id` int
-,`nb_elements` int
+,`lieu_id` int(11)
+,`nb_elements` int(11)
 ,`date_verification` date
 ,`date_max` date
 );
@@ -121,30 +121,30 @@ CREATE TABLE `liste` (
 -- --------------------------------------------------------
 
 --
--- Structure de la table `matos`
+-- Table structure for table `matos`
 --
 
 CREATE TABLE `matos` (
-  `id` int NOT NULL,
-  `reference` varchar(8) NOT NULL DEFAULT '00XXX000' COMMENT 'Référence du lot',
-  `libelle` varchar(30) NOT NULL,
-  `categorie_id` int NOT NULL,
-  `fabricant_id` int NOT NULL,
-  `photo` varchar(50) CHARACTER SET utf8mb3 COLLATE utf8mb3_general_ci NOT NULL DEFAULT 'null.jpeg',
-  `lieu_id` int NOT NULL,
-  `en_service` tinyint(1) GENERATED ALWAYS AS (((`nb_elements` > 0) and (`libelle` <> _utf8mb3'HS'))) VIRTUAL NOT NULL,
-  `facture_id` int NOT NULL,
-  `date_debut` date NOT NULL,
+  `id` int(11) NOT NULL,
+  `reference` varchar(8) DEFAULT '00XXX000' COMMENT 'Référence du lot',
+  `libelle` varchar(60) DEFAULT NULL,
+  `categorie_id` int(11) DEFAULT NULL,
+  `fabricant_id` int(11) DEFAULT NULL,
+  `photo` varchar(50) DEFAULT 'null.jpeg',
+  `lieu_id` int(11) DEFAULT NULL,
+  `en_service` tinyint(1) GENERATED ALWAYS AS (`nb_elements` > 0 and `libelle` <> _utf8mb3'HS') VIRTUAL,
+  `facture_id` int(11) DEFAULT NULL,
+  `date_debut` date DEFAULT NULL,
   `date_max` date DEFAULT NULL,
-  `nb_elements_initial` int NOT NULL,
-  `nb_elements` int DEFAULT NULL,
-  `verification_id` int DEFAULT '1',
-  `utilisateur_id` int NOT NULL DEFAULT '1' COMMENT 'Vérificateur par défaut à l''achat',
-  `remarques` text
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
+  `nb_elements_initial` int(11) DEFAULT NULL,
+  `nb_elements` int(11) DEFAULT NULL,
+  `verification_id` int(11) DEFAULT 1,
+  `utilisateur_id` int(11) DEFAULT 1 COMMENT 'Vérificateur par défaut à l`achat',
+  `remarques` text DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
 
 --
--- Déclencheurs `matos`
+-- Triggers `matos`
 --
 DELIMITER $$
 CREATE TRIGGER `nombre_elements` BEFORE INSERT ON `matos` FOR EACH ROW SET 
@@ -156,58 +156,58 @@ DELIMITER ;
 -- --------------------------------------------------------
 
 --
--- Structure de la table `utilisateur`
+-- Table structure for table `utilisateur`
 --
 
 CREATE TABLE `utilisateur` (
-  `id` int NOT NULL,
-  `username` varchar(16) NOT NULL,
+  `id` int(11) NOT NULL,
+  `username` varchar(16) DEFAULT NULL,
   `email` varchar(255) DEFAULT NULL,
-  `password` varchar(32) NOT NULL,
-  `date_creation` timestamp NULL DEFAULT CURRENT_TIMESTAMP
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
+  `password` varchar(32) DEFAULT NULL,
+  `date_creation` timestamp NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
 
 -- --------------------------------------------------------
 
 --
--- Structure de la table `verification`
+-- Table structure for table `verification`
 --
 
 CREATE TABLE `verification` (
-  `id` int NOT NULL,
-  `date_heure_verification` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `id` int(11) NOT NULL,
+  `date_heure_verification` timestamp NULL DEFAULT current_timestamp(),
   `date_verification` date GENERATED ALWAYS AS (cast(`date_heure_verification` as date)) VIRTUAL,
-  `utilisateur_id` int NOT NULL,
-  `remarques` text
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3;
+  `utilisateur_id` int(11) DEFAULT NULL,
+  `remarques` text DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
 
 --
--- Index pour les tables déchargées
+-- Indexes for dumped tables
 --
 
 --
--- Index pour la table `categorie`
+-- Indexes for table `categorie`
 --
 ALTER TABLE `categorie`
   ADD PRIMARY KEY (`id`),
   ADD UNIQUE KEY `id_UNIQUE` (`id`);
 
 --
--- Index pour la table `fabricant`
+-- Indexes for table `fabricant`
 --
 ALTER TABLE `fabricant`
   ADD PRIMARY KEY (`id`),
   ADD UNIQUE KEY `id_UNIQUE` (`id`);
 
 --
--- Index pour la table `facture`
+-- Indexes for table `facture`
 --
 ALTER TABLE `facture`
   ADD PRIMARY KEY (`id`),
   ADD UNIQUE KEY `id_UNIQUE` (`id`);
 
 --
--- Index pour la table `lieu`
+-- Indexes for table `lieu`
 --
 ALTER TABLE `lieu`
   ADD PRIMARY KEY (`id`),
@@ -215,7 +215,7 @@ ALTER TABLE `lieu`
   ADD UNIQUE KEY `id_UNIQUE` (`id`);
 
 --
--- Index pour la table `matos`
+-- Indexes for table `matos`
 --
 ALTER TABLE `matos`
   ADD PRIMARY KEY (`id`),
@@ -229,14 +229,14 @@ ALTER TABLE `matos`
   ADD KEY `fk_matos_fabricant1_idx` (`fabricant_id`);
 
 --
--- Index pour la table `utilisateur`
+-- Indexes for table `utilisateur`
 --
 ALTER TABLE `utilisateur`
   ADD PRIMARY KEY (`id`),
   ADD UNIQUE KEY `id_UNIQUE` (`id`);
 
 --
--- Index pour la table `verification`
+-- Indexes for table `verification`
 --
 ALTER TABLE `verification`
   ADD PRIMARY KEY (`id`),
@@ -244,75 +244,75 @@ ALTER TABLE `verification`
   ADD KEY `fk_verification_utilisateur1_idx` (`utilisateur_id`);
 
 --
--- AUTO_INCREMENT pour les tables déchargées
+-- AUTO_INCREMENT for dumped tables
 --
 
 --
--- AUTO_INCREMENT pour la table `categorie`
+-- AUTO_INCREMENT for table `categorie`
 --
 ALTER TABLE `categorie`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
--- AUTO_INCREMENT pour la table `fabricant`
+-- AUTO_INCREMENT for table `fabricant`
 --
 ALTER TABLE `fabricant`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
--- AUTO_INCREMENT pour la table `facture`
+-- AUTO_INCREMENT for table `facture`
 --
 ALTER TABLE `facture`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
--- AUTO_INCREMENT pour la table `lieu`
+-- AUTO_INCREMENT for table `lieu`
 --
 ALTER TABLE `lieu`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
--- AUTO_INCREMENT pour la table `matos`
+-- AUTO_INCREMENT for table `matos`
 --
 ALTER TABLE `matos`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
--- AUTO_INCREMENT pour la table `utilisateur`
+-- AUTO_INCREMENT for table `utilisateur`
 --
 ALTER TABLE `utilisateur`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
--- AUTO_INCREMENT pour la table `verification`
+-- AUTO_INCREMENT for table `verification`
 --
 ALTER TABLE `verification`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 -- --------------------------------------------------------
 
 --
--- Structure de la vue `fiche`
+-- Structure for view `fiche`
 --
 DROP TABLE IF EXISTS `fiche`;
 
-CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `fiche`  AS SELECT `matos`.`id` AS `id`, `matos`.`reference` AS `ref`, `matos`.`libelle` AS `libelle`, `categorie`.`libelle` AS `categorie`, `categorie`.`id` AS `categorie_id`, `fabricant`.`libelle` AS `fabricant`, `fabricant`.`id` AS `fabricant_id`, `lieu`.`libelle` AS `lieu`, `lieu`.`id` AS `lieu_id`, `facture`.`vendeur` AS `vendeur`, `facture`.`id` AS `facture_id`, `facture`.`date_facture` AS `date_facture`, `utilisateur`.`username` AS `username`, `matos`.`utilisateur_id` AS `utilisateur_id`, `matos`.`nb_elements` AS `nb_elements`, `matos`.`date_max` AS `date_max`, `matos`.`date_debut` AS `date_debut`, `verification`.`id` AS `verification_id`, `verification`.`date_verification` AS `date_verification`, `matos`.`remarques` AS `remarques`, `matos`.`photo` AS `photo`, `matos`.`nb_elements_initial` AS `nb_elements_initial` FROM ((((((`matos` join `categorie`) join `fabricant`) join `lieu`) join `facture`) join `verification`) join `utilisateur`) WHERE ((0 <> `matos`.`en_service`) AND (`matos`.`categorie_id` = `categorie`.`id`) AND (`matos`.`fabricant_id` = `fabricant`.`id`) AND (`matos`.`verification_id` = `verification`.`id`) AND (`matos`.`utilisateur_id` = `utilisateur`.`id`) AND (`matos`.`lieu_id` = `lieu`.`id`)) ;
+CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `fiche`  AS SELECT `matos`.`id` AS `id`, `matos`.`reference` AS `ref`, `matos`.`libelle` AS `libelle`, `categorie`.`libelle` AS `categorie`, `categorie`.`id` AS `categorie_id`, `fabricant`.`libelle` AS `fabricant`, `fabricant`.`id` AS `fabricant_id`, `lieu`.`libelle` AS `lieu`, `lieu`.`id` AS `lieu_id`, `facture`.`vendeur` AS `vendeur`, `facture`.`id` AS `facture_id`, `facture`.`date_facture` AS `date_facture`, `utilisateur`.`username` AS `username`, `matos`.`utilisateur_id` AS `utilisateur_id`, `matos`.`nb_elements` AS `nb_elements`, `matos`.`date_max` AS `date_max`, `matos`.`date_debut` AS `date_debut`, `verification`.`id` AS `verification_id`, `verification`.`date_verification` AS `date_verification`, `matos`.`remarques` AS `remarques`, `matos`.`photo` AS `photo`, `matos`.`nb_elements_initial` AS `nb_elements_initial` FROM ((((((`matos` join `categorie`) join `fabricant`) join `lieu`) join `facture`) join `verification`) join `utilisateur`) WHERE 0 <> `matos`.`en_service` AND `matos`.`categorie_id` = `categorie`.`id` AND `matos`.`fabricant_id` = `fabricant`.`id` AND `matos`.`verification_id` = `verification`.`id` AND `matos`.`utilisateur_id` = `utilisateur`.`id` AND `matos`.`lieu_id` = `lieu`.`id` ;
 
 -- --------------------------------------------------------
 
 --
--- Structure de la vue `liste`
+-- Structure for view `liste`
 --
 DROP TABLE IF EXISTS `liste`;
 
-CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `liste`  AS SELECT `matos`.`id` AS `id`, `matos`.`reference` AS `ref`, `matos`.`libelle` AS `libelle`, `fabricant`.`libelle` AS `fabricant`, `categorie`.`libelle` AS `categorie`, `matos`.`categorie_id` AS `categorie_id`, `lieu`.`libelle` AS `lieu`, `matos`.`lieu_id` AS `lieu_id`, `matos`.`nb_elements` AS `nb_elements`, `verification`.`date_verification` AS `date_verification`, `matos`.`date_max` AS `date_max` FROM ((((`matos` join `fabricant`) join `categorie`) join `lieu`) join `verification`) WHERE ((0 <> `matos`.`en_service`) AND (`matos`.`categorie_id` = `categorie`.`id`) AND (`matos`.`fabricant_id` = `fabricant`.`id`) AND (`matos`.`verification_id` = `verification`.`id`) AND (`matos`.`lieu_id` = `lieu`.`id`)) ;
+CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `liste`  AS SELECT `matos`.`id` AS `id`, `matos`.`reference` AS `ref`, `matos`.`libelle` AS `libelle`, `fabricant`.`libelle` AS `fabricant`, `categorie`.`libelle` AS `categorie`, `matos`.`categorie_id` AS `categorie_id`, `lieu`.`libelle` AS `lieu`, `matos`.`lieu_id` AS `lieu_id`, `matos`.`nb_elements` AS `nb_elements`, `verification`.`date_verification` AS `date_verification`, `matos`.`date_max` AS `date_max` FROM ((((`matos` join `fabricant`) join `categorie`) join `lieu`) join `verification`) WHERE 0 <> `matos`.`en_service` AND `matos`.`categorie_id` = `categorie`.`id` AND `matos`.`fabricant_id` = `fabricant`.`id` AND `matos`.`verification_id` = `verification`.`id` AND `matos`.`lieu_id` = `lieu`.`id` ;
 
 --
--- Contraintes pour les tables déchargées
+-- Constraints for dumped tables
 --
 
 --
--- Contraintes pour la table `matos`
+-- Constraints for table `matos`
 --
 ALTER TABLE `matos`
   ADD CONSTRAINT `fk_matos_cat` FOREIGN KEY (`categorie_id`) REFERENCES `categorie` (`id`),
@@ -323,7 +323,7 @@ ALTER TABLE `matos`
   ADD CONSTRAINT `fk_matos_verification` FOREIGN KEY (`verification_id`) REFERENCES `verification` (`id`);
 
 --
--- Contraintes pour la table `verification`
+-- Constraints for table `verification`
 --
 ALTER TABLE `verification`
   ADD CONSTRAINT `fk_verification_utilisateur1` FOREIGN KEY (`utilisateur_id`) REFERENCES `utilisateur` (`id`);
