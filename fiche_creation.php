@@ -37,10 +37,10 @@
   
   #echo "<br>\$POST :"; var_dump($_POST); echo "<br>"; #<-------------------------
   
-  $action = [];
+  $action = '';
   if(isset($_POST['action'])) {$action = $_POST['action'];};
   
-  #echo "<br>\$action : "; var_dump($action)."<br>"; # <------------------------- VERIF
+  #echo var_dump($action); # <------------------------- VERIF
   
   if (isset($_POST['action'])) {$action =$_POST['action'];} else {$action ='creation';};
   if (isset($_POST['id'])) {$id = $_POST['id'];}
@@ -49,7 +49,7 @@
   if ($action == 'creation') {$donnees = init_donnees();} ;
   
   #echo "<br>\$_POST[appel_liste] : "; var_dump($_POST['appel_liste'])."<br>"; # <------------------------- VERIF
-  #echo "<br>\$donnees : avant mise à jour "; var_dump($donnees)."<br>"; # <------------------------- VERIF
+  #echo var_dump($donnees); # <------------------------- VERIF
   
   #  echo "<br>\$action : "; var_dump($action); echo "<br>"; # <------------------------- VERIF
   
@@ -101,7 +101,6 @@
   ############################
   
   if ($action == 'creation') {
-    $donnees['reference'] =rand(10000000,99999999);
     try {
       $sql = "INSERT INTO matos (
         reference,

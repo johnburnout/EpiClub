@@ -2,7 +2,7 @@
 	function init_donnees() {
 		$donnees = array(
 			'id' => 0,
-			'reference' => date('Ymd'),
+			'reference' => rand(10000000,99999999),
 			'libelle' => '' ,
 			'categorie' => '',
 			'categorie_id' => 1,
