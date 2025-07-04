@@ -1,0 +1,2 @@
+Dans phpmyadmin : créer une base de  "epi_db"
+Dans la base crée : importer le fichier "init.sql"
