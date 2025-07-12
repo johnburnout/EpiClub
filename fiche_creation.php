@@ -292,3 +292,4 @@ $viewData = [
 
     <?php require $root."includes/footer.php"; ?>
 </body>
+</html>
