@@ -5,10 +5,10 @@
   *
   */
 
-$host       = "localhost";
-$username   = "jean";
-$password   = "xF]*/Jeul2QDGUr/";
-$dbname     = "epi";
+$host       = "";
+$username   = "";
+$password   = "";
+$dbname     = "";
 
 #####
   
