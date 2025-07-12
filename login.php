@@ -7,8 +7,10 @@ session_start([
     'use_strict_mode' => true
 ]);
 
-require $root."config.php";
-require $root."common.php";
+// Inclusion des fichiers de configuration avec vérification
+defined('ROOT') or define('ROOT', dirname(__DIR__) . DIRECTORY_SEPARATOR);
+require __DIR__ . '/config.php';
+require ROOT . 'includes/common.php';
 
 // Initialisation des variables
 $connect = "Déconnecté";
@@ -94,7 +96,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['connexion'])) {
         input[type="text"], input[type="password"] { padding: 5px; width: 200px; }
         input[type="submit"] { padding: 5px 15px; }
     </style>
-	<?php include $root.'includes/header.php';?>
+	<?php include ROOT . 'includes/header.php';?>
 </head>
 <body>
     <header style="text-align: right;">
