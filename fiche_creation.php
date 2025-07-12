@@ -291,3 +291,4 @@ $viewData = [
     <?php endif; ?>
 
     <?php require $root."includes/footer.php"; ?>
+</body>
