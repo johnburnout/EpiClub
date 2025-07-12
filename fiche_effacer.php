@@ -1,11 +1,10 @@
 <?php
 session_start();
-// #############################
-// Load common data and configuration
-// #############################
-require "config.php";
-require $root."includes/common.php";
-require $root."includes/init_donnees.php";
+
+// Inclusion des fichiers de configuration avec vérification
+defined('ROOT') or define('ROOT', dirname(__DIR__) . DIRECTORY_SEPARATOR);
+require __DIR__ . '/config.php';
+require ROOT . 'includes/common.php';
 
 // #############################
 // Verify user session
@@ -56,17 +55,25 @@ if ($id > 0 && isset($_POST['supprimer'])) {
 if (isset($_POST['confirmer'])) {
     $avis = "La fiche a été supprimée, cliquer sur le bouton 'Abandonner' pour sortir.";
 }
-
+?>
 // #############################
 // HTML Output
 // #############################
-require $root."includes/header.php";
-?>
 <!DOCTYPE html>
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <title>Suppression de fiche</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Connexion - Gestionnaire EPI</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
+        .error { color: red; margin-bottom: 15px; }
+        form { margin-top: 20px; }
+        table { margin: 20px 0; }
+        input[type="text"], input[type="password"] { padding: 5px; width: 200px; }
+        input[type="submit"] { padding: 5px 15px; }
+    </style>
+	<?php include ROOT . 'includes/header.php';?>
 </head>
 <body>
     <p>
