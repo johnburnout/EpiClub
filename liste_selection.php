@@ -292,3 +292,5 @@ try {
 $connection->close();
 require $root."includes/footer.php"; 
 ?>
+</body>
+</html>
