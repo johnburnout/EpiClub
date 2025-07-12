@@ -1,4 +1,4 @@
-<?php
+t<?php
 session_start();
 
 // Inclusion des fichiers de configuration avec vérification
@@ -248,3 +248,5 @@ if (!empty($_FILES['monfichier']['name']) && $id > 0) {
 <?php
 require $root."includes/footer.php"; 
 ?>
+</body>
+</html>
