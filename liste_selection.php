@@ -1,400 +1,294 @@
 <?php
-	session_start();	
-	require "config.php";
-	require $root."includes/header.php";
+session_start();
 
+// Inclusion des fichiers de configuration avec vérification
+defined('ROOT') or define('ROOT', dirname(__DIR__) . DIRECTORY_SEPARATOR);
+require __DIR__ . '/config.php';
+require ROOT . 'includes/common.php';
 
-	
-	require $root."includes/common.php";
-	
-	
-	#
-	#echo "<br>\$_POST : "; escape(print_r($_POST)); echo "<br>"; # <------------------------- VERIF
-	#
-	#
-	#echo "<br>\$23/5 : ".(intval(23%5))."<br>"; # <------------------------- VERIF
-	#
-	
+// Initialisation de la connexion MySQLi avec gestion d'erreurs
+mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
+try {
+    $connection = new mysqli($host, $username, $password, $dbname);
+    $connection->set_charset("utf8mb4");
+} catch (mysqli_sql_exception $e) {
+    die("Erreur de connexion à la base de données: " . $e->getMessage());
+};
 
+// Vérification de la connexion utilisateur
+$connect = (count($_SESSION) > 0) ? "Connecté comme ".htmlspecialchars($_SESSION['pseudo']) : "Déconnecté";
 
-# #############################
-# verification connexion
-# #############################
-	
-	if (count($_SESSION) > 0)	
-		{
-			$connect = "Connecté comme ".$_SESSION['pseudo']." : ";
-		}
-	else
-		{
-			$connect = "Déconnecté";
-		}
+// #############################
+// Gestion de la pagination avec validation
+// #############################
+$defaults = [
+    'debut' => 1,
+    'long' => 20,
+    'nblignes' => 20,
+    'id' => 1,
+    'lieu_id' => 0,
+    'cat_id' => 0,
+    'tri' => 'id'
+];
 
+// Fonction de validation/sanitization
+function sanitizeInput($input, $type = 'int') {
+    switch ($type) {
+        case 'int':
+            return filter_var($input, FILTER_VALIDATE_INT, ['options' => ['min_range' => 0]]);
+        case 'string':
+            return htmlspecialchars(trim($input), ENT_QUOTES, 'UTF-8');
+        default:
+            return null;
+    }
+}
 
-	
-mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT); 
-	
-$connection = new mysqli($host, $username, $password, $dbname);
+// Traitement des paramètres
+$params = [];
+foreach ($defaults as $key => $default) {
+    if (isset($_POST[$key])) {
+        $params[$key] = sanitizeInput($_POST[$key], is_numeric($default) ? 'int' : 'string');
+    } else {
+        $params[$key] = $default;
+    }
+}
 
-	
-# #############################
-# initialisation variables pagination
-# #############################
-	
-$debut = 1 ; $long = 20; $nblignes = 20;
-if (isset($_POST['debut'])) {$debut = max(0, $_POST['debut']-1);};
-if (isset($_POST['long'])) {$long = $_POST['long'];};
-if (isset($_POST['nblignes'])) {$nblignes = $_POST['nblignes'];};
-$id = 1; if (isset($_POST['id'])) {$id = $_POST['id'];};
+// Gestion des cookies
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    setcookie('debut', $params['debut'], time()+86400, '/', '', true, true);
+    setcookie('long', $params['long'], time()+86400, '/', '', true, true);
+    setcookie('nblignes', $params['nblignes'], time()+86400, '/', '', true, true);
+} else {
+    $params['debut'] = $_COOKIE['debut'] ?? $defaults['debut'];
+    $params['long'] = $_COOKIE['long'] ?? $defaults['long'];
+    $params['nblignes'] = $_COOKIE['nblignes'] ?? $defaults['nblignes'];
+}
 
-# ############################
-# Création des liste
-# ############################
+// ############################
+// Récupération des listes (lieux et catégories)
+// ############################
+try {
+    // Récupération des lieux
+    $stmt = $connection->prepare("SELECT id, libelle FROM lieu ORDER BY id");
+    $stmt->execute();
+    $lieux = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+    $nLieux = count($lieux);
 
+    // Récupération des catégories
+    $stmt = $connection->prepare("SELECT id, libelle FROM categorie ORDER BY id");
+    $stmt->execute();
+    $categories = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+    $nCategorie = count($categories);
+} catch (mysqli_sql_exception $e) {
+    die("Erreur lors de la récupération des données: " . $e->getMessage());
+}
 
-#   # Récupération des lieux
-$statement = $connection->query("SELECT * FROM lieu ORDER BY id");
-$nLieux = $statement->num_rows;
-$lieux = $statement->fetch_all(MYSQLI_ASSOC);
-//$lieux = $lieux[0];
-	
-#   # Récupération des categories
-$statement = $connection->query("SELECT * FROM categorie ORDER BY id");
-$nCategorie = $statement->num_rows;
-$categories = $statement->fetch_all(MYSQLI_ASSOC);
+// Construction des listes déroulantes
+$listeLieux = "<option value='0'>*</option>";
+foreach ($lieux as $lieu) {
+    $selected = ($params['lieu_id'] == $lieu['id']) ? 'selected' : '';
+    $listeLieux .= "<option value='{$lieu['id']}' $selected>{$lieu['libelle']}</option>";
+}
 
-$choixLieu = "";
-$nomLieu = '*';
-$id_lieu = 0;
+$listeCategories = "<option value='0'>*</option>";
+foreach ($categories as $cat) {
+    $selected = ($params['cat_id'] == $cat['id']) ? 'selected' : '';
+    $listeCategories .= "<option value='{$cat['id']}' $selected>{$cat['libelle']}</option>";
+}
 
-if (isset($_POST['lieu_id'])and $_POST['lieu_id'] > 0)
-	{	
-		$id_lieu = $lieux[$_POST['lieu_id']-1]['id'];
-		$lieux[$id_lieu-1]['id'] = $lieux[$id_lieu-1]['id']." selected";
-		$choixLieu = "lieu_id = ".$id_lieu;
-		$nomLieu = $lieux[$id_lieu]["libelle"];
-	};
-	#
-	#echo "<br>\$lieux : "; print_r($lieux);echo "<br>"; # <------------------------- VERIF
-	# 
-	$listeLieux = "<option value = 0>*</option>";
-		
-for ($i = 0; $i < $nLieux; $i++)
-	{
-		$listeLieux = $listeLieux."<option value= ".$lieux[$i]["id"].">".$lieux[$i]["libelle"]." </option>";
-	};
-	
-	#
-	#  echo "<br>\$listeLieux : ".escape($listeLieux)."<br>"; # <------------------------- VERIF
-	# 
-	#
-	#echo "<br>\$id_lieu : ".$id_lieu."<br>"; # <------------------------- VERIF
-	# 
-	
-$choixCat = "";
-$nomCat = '*';
-$id_cat = 0;
+// ###################################
+// Construction de la requête principale avec protection
+// ###################################
+$whereClauses = [];
+$queryParams = [];
+$types = '';
 
-if (isset($_POST['cat_id']) and $_POST['cat_id'] > 0)
-	{
-		$id_cat = $categories[$_POST['cat_id']-1]['id'];
-		$categories[$id_cat-1]['id'] = $categories[$id_cat-1]['id']." selected";
-		$choixCat = "categorie_id = ".$id_cat;
-		$nomCat = $categories[$id_cat]["libelle"];
-	};
-	#
-	#echo "<br>\$categories : "; print_r($categories);echo "<br>"; # <------------------------- VERIF
-	#
-	
-	$listeCategories = "<option value =0>*</option>";
-	
-for ($i = 0; $i < $nCategorie; $i++)
-	{
-		$listeCategories = $listeCategories."<option value= ".($categories[$i]["id"]).">".$categories[$i]["libelle"]." </option>";
-	};
+if ($params['lieu_id'] > 0) {
+    $whereClauses[] = "lieu_id = ?";
+    $queryParams[] = $params['lieu_id'];
+    $types .= 'i';
+}
 
-	#
-	 #echo "<br>\$listeCategories : ".escape($listeCategories)."<br>"; # <------------------------- VERIF
-	# 
-	#
-	#echo "<br>\$id_cat : ".$id_cat."<br>"; # <------------------------- VERIF
-	# 
-	
-	
-###################################
-# Création du critère de sélection
-###################################
+if ($params['cat_id'] > 0) {
+    $whereClauses[] = "categorie_id = ?";
+    $queryParams[] = $params['cat_id'];
+    $types .= 'i';
+}
 
-$count = 0;
+$where = empty($whereClauses) ? '' : 'WHERE ' . implode(' AND ', $whereClauses);
 
-if ($id_lieu > 0) { $count += 1;};
-if ($id_cat > 0) { $count += 2;};
-
-	#
-	#echo "<br>\$count : ".$count."<br>"; # <------------------------- VERIF
-	# 
-	
-if ($count == 3)
-	{
-		$sepChoix = " AND ";
-	}
-else
-	{
-		$sepChoix = "";
-	};
-if ($count > 0)	{
-		$initChoix = " WHERE ";
-	}
-else
-	{
-		$initChoix = "";
-	};
-
-
-
-$choix = $initChoix.$choixLieu.$sepChoix.$choixCat;
-
-	#
-	#echo "<br>\$choix : ".escape($choix)."<br>"; # <------------------------- VERIF
-	#
-
-# ###################
-# Critères de tri
-# ###################
-
-$choixTri="
-<option value ='id'>Identifiant</option>,
-<option value ='ref'>Référence</option>,
-<option value ='lieu_id'>Lieu</option>,
-<option value ='date_verification'>Date de vérification</option>
-<option value ='fabricant'>Fabricant</option>
-";
-	
-$tri = 'id';
-
-if (isset($_POST['tri']))
-	{
-	$tri = $_POST['tri'];
-	};
-
-###########################
-# Recherche dans la base
-###########################
+// Validation du champ de tri
+$allowedSort = ['id', 'ref', 'lieu_id', 'date_verification', 'fabricant'];
+$sort = in_array($params['tri'], $allowedSort) ? $params['tri'] : 'id';
 
 try {
-	
-	$sql = "SELECT
-		id,
-		ref,
-		libelle,
-		fabricant,
-		categorie,
-		categorie_id,
-		lieu,
-		lieu_id,
-		nb_elements,
-		date_verification,
-		date_max
-	FROM
-		liste ".$choix."
-	ORDER BY ".$tri.";";
-//	print_r($sql);
-//	echo $sql;
-	
-	$statement = $connection->query($sql);
-
-//	$statement->execute();
-//	$result = $statement->get_result();
-	$result = $statement->fetch_all(MYSQLI_ASSOC);
-	$nblignes = count($result);
-
-	
-	#
-	#	echo "<br>\$result : "; var_dump($result); echo  '<br>'  ; #<-------------------------
-	#
-	
-	#
-	#	echo "<br>\$nblignes : "; print_r($nblignes); echo  '<br>'  ; #<-------------------------
-	#
-	
-	$n = $statement->num_rows; 
-//	for ($i=0; $i < $n; $i++)
-//	{
-//		var_dump($result[$i]['id']);
-//		echo '  '.intval($result[$i]["id"]);
-//	};
-	
-//	echo $n.$result[1];
+    $sql = "SELECT id, ref, libelle, fabricant, categorie, categorie_id, 
+                   lieu, lieu_id, nb_elements, date_verification, date_max
+            FROM liste $where ORDER BY $sort";
+    
+    $stmt = $connection->prepare($sql);
+    
+    if (!empty($queryParams)) {
+        $stmt->bind_param($types, ...$queryParams);
+    }
+    
+    $stmt->execute();
+    $result = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+    $nblignes = count($result);
+    
+    // Calcul de la pagination
+    $nbpages = ceil($nblignes / $params['long']);
+} catch (mysqli_sql_exception $e) {
+    die("Erreur lors de l'exécution de la requête: " . $e->getMessage());
 }
-catch(Exception $error) {
-echo $sql . "<br>" . $error->getMessage();
-}
-
-	if ($nblignes < $long) {$nbpages = 1;}
-	else {
-		if ($nblignes % $long == 0) {
-			$nbpages = $nblignes / $long;
-		}
-		else {
-			$nbpages = intval($nblignes / $long )+ 1;
-		};
-	};	
-
-	#
-	 #echo "<br>\$_debut, \$nblignes, \$nbpages : ".escape($debut)." - ".$nblignes." - ".$nbpages."<br>"; # <------------------------- VERIF
-	#
-	
-	
-# #############################
-# Code HTML 
-# #############################
-	
 ?>
-<body><p align="right">
-	<?php 
-		if (count($_SESSION) > 0)
-	{ ?>
-	<form action="index.php" method="post"><?php echo $connect." "; ?><input type='submit' name="deconnexion" value="Déconnexion"></form><?php  
-		}
-		else 
-	{ ?>
-	<a href=login.php>Connection</a><?php
-		}
-	?></p>
-	<hr>
-	<table>
-		<tr>
-			<td> <h1>Gestionnaire EPI</h1></td><td rowspan=2><img src="images/logo.png" width="200"></td>
-		</tr>
-		<tr><td><h2>Périgord Escalade</h2></td></tr>
-	</table>
-	
+// #############################
+// Affichage HTML
+// #############################
 
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Connexion - Gestionnaire EPI</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
+        .error { color: red; margin-bottom: 15px; }
+        form { margin-top: 20px; }
+        table { margin: 20px 0; }
+        input[type="text"], input[type="password"] { padding: 5px; width: 200px; }
+        input[type="submit"] { padding: 5px 15px; }
+    </style>
+	<?php include ROOT . 'includes/header.php';?>
+</head>
 
-<hr>
+<body>
+    <p align="right">
+        <?php if (count($_SESSION) > 0): ?>
+            <form action="index.php" method="post">
+                <?= htmlspecialchars($connect) ?>
+                <input type="submit" name="deconnexion" value="Déconnexion">
+            </form>
+        <?php else: ?>
+            <a href="login.php">Connexion</a>
+        <?php endif; ?>
+    </p>
+    <hr>
+    
+    <table>
+        <tr>
+            <td><h1>Gestionnaire EPI</h1></td>
+            <td rowspan="2"><img src="images/logo.png" width="200" alt="Logo"></td>
+        </tr>
+        <tr>
+            <td><h2>Périgord Escalade</h2></td>
+        </tr>
+    </table>
+    <hr>
 
-	<!-- Test si connecté debut -->
-	<?php if (count($_SESSION) > 0)
-		{ 
-	?>
-	<!---->
-	
-<h3>Filtrer les données</h3>
+    <?php if (count($_SESSION) > 0): ?>
+        <h3>Filtrer les données</h3>
+        
+        <form method="post">
+            <table>
+                <thead>
+                    <tr>
+                        <th colspan="2">Filtrer par :</th>
+                        <th colspan="2">Trier par :</th>
+                        <th>Nb de lignes par feuille:</th>
+                        <th>Première ligne :</th>
+                    </tr>
+                    <tr>
+                        <td>Lieu</td>
+                        <td>Catégorie</td>
+                        <td rowspan="2">
+                            <select name="tri">
+                                <option value="id" <?= $sort === 'id' ? 'selected' : '' ?>>Identifiant</option>
+                                <option value="ref" <?= $sort === 'ref' ? 'selected' : '' ?>>Référence</option>
+                                <option value="lieu_id" <?= $sort === 'lieu_id' ? 'selected' : '' ?>>Lieu</option>
+                                <option value="date_verification" <?= $sort === 'date_verification' ? 'selected' : '' ?>>Date de vérification</option>
+                                <option value="fabricant" <?= $sort === 'fabricant' ? 'selected' : '' ?>>Fabricant</option>
+                            </select>
+                        </td>
+                        <td colspan="2" rowspan="2">
+                            <input type="number" name="long" min="5" max="<?= min($nblignes + $params['long'], $params['long']*($nbpages+1)) ?>" step="5" value="<?= $params['long'] ?>">
+                        </td>
+                        <td rowspan="2">
+                            <input type="number" name="debut" min="1" step="<?= $params['long'] ?>" max="<?= max($nblignes, $nbpages*$params['long']) ?>" value="<?= $params['debut'] + 1 ?>">
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>
+                            <select name="lieu_id">
+                                <?= $listeLieux ?>
+                            </select>
+                        </td>
+                        <td>
+                            <select name="cat_id">
+                                <?= $listeCategories ?>
+                            </select>
+                        </td>
+                    </tr>
+                </thead>
+            </table>
+            <p></p>
+            <input type="submit" name="choix" value="Filtrer et trier">
+        </form>
 
-<form method="post">
-	<table>
-		<thead>
-			<tr>
-				<th colspan=2>Filtrer par :</th><th colspan = 2>Trier par : </th>
-				<th>
-					Nb de lignes par feuille:
-				</th>
-				<th>
-					Permière ligne :
-				</th>
-			</tr>
-			<tr>
-				<td>Lieu</td>
-				<td>Catégorie</td>
-				<td rowspan = 2>
-					<select name='tri'>
-						<?php echo $choixTri ?>	
-					</select>	
-				</td>
-				<td colspan=2  rowspan=2>
-					<input type="number" name="long" min=5 max=<?php echo (min($nblignes+$long, $long*($nbpages+1))) ?> step=5 value="<?php echo ($long) ?>">
-				</td>
-				<td rowspan=2>
-					<input type="number" name="debut" min=1 step=<?php echo $long?> max=<?php echo max($nblignes, $nbpages*$long)?>  value="<?php echo ($debut+1) ?>">
-				</td>
-			</tr>
-			<tr>
-				<td>
-					<select name='lieu_id'>
-						<?php echo $listeLieux ?>	
-					</select>					
-				</td>
-				<td>
-					<select name='cat_id'>
-						<?php echo $listeCategories ?>	
-					</select>
-				</td>
-			</tr>
+        <?php if ($result && $nblignes > 0): ?>
+            <hr>
+            <h3>Liste</h3>
+            
+            <form method="post" action="fiche_verif.php">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Ref</th>
+                            <th>Libellé</th>
+                            <th>Fabricant</th>
+                            <th>Cat</th>
+                            <th>Lieu</th>
+                            <th>Nb éléments</th>
+                            <th>Date Vérif</th>
+                            <th>Date Max</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php for ($i = $params['debut']; $i < min($params['debut'] + $params['long'], $nblignes); $i++): ?>
+                            <tr>
+                                <td><input type="radio" name="id" required value="<?= $result[$i]['id'] ?>"></td>
+                                <td><?= htmlspecialchars($result[$i]['ref']) ?></td>
+                                <td><?= htmlspecialchars($result[$i]['libelle']) ?></td>
+                                <td><?= htmlspecialchars($result[$i]['fabricant']) ?></td>
+                                <td><?= htmlspecialchars($result[$i]['categorie']) ?></td>
+                                <td><?= htmlspecialchars($result[$i]['lieu']) ?></td>
+                                <td><?= htmlspecialchars($result[$i]['nb_elements']) ?></td>
+                                <td><?= htmlspecialchars($result[$i]['date_verification']) ?></td>
+                                <td><?= htmlspecialchars($result[$i]['date_max']) ?></td>
+                            </tr>
+                        <?php endfor; ?>
+                    </tbody>
+                </table>
+                <p></p>
+                <input type="hidden" name="appel_liste" value="1">
+                <input type="submit" name="submit" value="Afficher la fiche">
+                <a href="fiche_creation.php">
+                    <input type="button" value="Créer une nouvelle fiche">
+                </a>
+                <a href="index.php">
+                    <input type="button" value="Revenir à l'accueil">
+                </a>
+            </form>
+        <?php else: ?>
+            <p>Aucune fiche trouvée !</p>
+        <?php endif; ?>
+    <?php else: ?>
+        <p>Vous n'êtes pas connecté</p>
+    <?php endif; ?>
 
-		</thead>
-	</table>
-	<p></p>
-	<input type="submit" name="choix" value="Filtrer et trier">
-	
-</form>
-<?php
-if ($result # && $statement->rowCount() > 0
-) { ?>
-<hr>
-<h3>Liste</h3>
-
-<form method="post" action="fiche_verif.php">
-	<table>
-		<thead>
-			<tr>
-				<th>#</th>
-				<th>Ref</th>
-				<th>Libellé</th>
-				<th>Fabricant</th>
-				<th>Cat</th>
-				<th>Lieu</th>
-				<th>Nb éléments</th>
-				<th>Date Vérif</th>
-				<th>Date Max</th>
-			</tr>
-		</thead>
-		<tbody>
-			<?php
-				for ($i = $debut; $i < min($debut + $long, $nblignes); $i++) { 						
-			?>
-			<tr>
-				<td><input type="radio" name="id" required value=<?php echo $result[$i]["id"]?> <?php echo " ".$i." : ".$result[$i]["id"]; ?>></td>
-				<td><?php echo $result[$i]["ref"]; ?></td>
-				<td><?php echo $result[$i]["libelle"]; ?></td>
-				<td><?php echo $result[$i]["fabricant"]; ?></td>
-				<td><?php echo $result[$i]["categorie"]; ?></td>
-				<td><?php echo $result[$i]["lieu"]; ?></td>
-				<td><?php echo $result[$i]["nb_elements"]; ?> </td>
-				<td><?php echo $result[$i]["date_verification"]; ?> </td>
-				<td><?php echo $result[$i]["date_max"]; ?> </td>
-				</tr>
-			<?php } ?>
-		</tbody>
-	</table>
-	<p></p>
-	<input type='hidden' name='appel_liste' value=1>
-	<input type="hidden" name='action' value='maj'>
-	<input type="hidden" name='debut' value=<?php echo $debut; ?>>
-	<input type="hidden" name='long' value=<?php echo $long; ?>>
-	<input type="hidden" name='nblignes' value=<?php echo $nblignes; ?>>
-	<input type="submit" name="submit" value="Afficher la fiche">
-	<a href='fiche_creation.php'>
-		<input type='button' value="Créer une nouvelle fiche" >
-	</a>
-	<a href='index.php'>
-		<input type='button' value="Revenir à l'accueil" >
-	</a>
-</form>
-<?php } else { ?>
-Pas de fiches trouvées !<?php# echo escape($_POST['location']); ?>.
- <?php 
- } ?>
-
-<p></p>
-<hr>
-	
-	<!-- Test si connecté fin -->
-	<?php 
-		}
-		else { ?>
-	<p>Tu n'es pas connecté</p>
-	<?php 
-	}?>
-	<!---->
-	
-<?php require $root."includes/footer.php"; ?>
+<?php 
+$connection->close();
+require $root."includes/footer.php"; 
+?>
