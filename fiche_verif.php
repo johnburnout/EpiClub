@@ -1,12 +1,10 @@
 <?php
 session_start();
 
-// #############################
-// Récupère les données communes
-// #############################
-require $root."config.php";
-require $root."includes/common.php";
-require $root."includes/init_donnees.php";
+// Inclusion des fichiers de configuration avec vérification
+defined('ROOT') or define('ROOT', dirname(__DIR__) . DIRECTORY_SEPARATOR);
+require __DIR__ . '/config.php';
+require ROOT . 'includes/common.php';
 
 // #############################
 // Verification connexion
@@ -120,12 +118,27 @@ if (!empty($_FILES['monfichier']['name']) && $id > 0) {
         'date_debut' => "<label for='date_debut'>Mise en service :</label><input name='date_debut' type='date' value='".htmlspecialchars($donnees['date_debut'])."'>"
     ];
 //};
-
+?>
 // #############################
 // Affichage HTML
 // #############################
-include $root."includes/header.php";
-?>
+
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Connexion - Gestionnaire EPI</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
+        .error { color: red; margin-bottom: 15px; }
+        form { margin-top: 20px; }
+        table { margin: 20px 0; }
+        input[type="text"], input[type="password"] { padding: 5px; width: 200px; }
+        input[type="submit"] { padding: 5px 15px; }
+    </style>
+	<?php include ROOT . 'includes/header.php';?>
+</head>
 <body>
     <p>
         <?php if ($isLoggedIn): ?>
