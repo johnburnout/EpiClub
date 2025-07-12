@@ -25,7 +25,12 @@ $avis = '';
 // #############################
 if ($id == 0) {
     mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
-    $connection = new mysqli($host, $username, $password, $dbname);
+    try {
+	    $connection = new mysqli($host, $username, $password, $dbname);
+	    $connection->set_charset("utf8mb4");
+	} catch (mysqli_sql_exception $e) {
+	    die("Erreur de connexion à la base de données: " . $e->getMessage());
+	};
 
     // Get the maximum ID from matos table
     $statement = $connection->query("SELECT MAX(id) AS max_id FROM matos");
