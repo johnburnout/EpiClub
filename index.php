@@ -28,8 +28,18 @@ $connect = (count($_SESSION) > 0 ?
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-    <?php include ROOT . 'includes/header.php'; ?>
-    <title>Gestionnaire EPI - Périgord Escalade</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Connexion - Gestionnaire EPI</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
+        .error { color: red; margin-bottom: 15px; }
+        form { margin-top: 20px; }
+        table { margin: 20px 0; }
+        input[type="text"], input[type="password"] { padding: 5px; width: 200px; }
+        input[type="submit"] { padding: 5px 15px; }
+    </style>
+	<?php include ROOT . 'includes/header.php';?>
 </head>
 <body>
     <header style="text-align: right; padding: 10px;">
