@@ -6,9 +6,9 @@
   */
 
 $host       = "localhost";
-$username   = "jean";
-$password   = "xF]*/Jeul2QDGUr/";
-$dbname     = "epi";
+$username   = "";
+$password   = "";
+$dbname     = "";
 
 #####
   
