@@ -2,16 +2,8 @@
 	function init_donnees() {
 		$donnees = array(
 			'id' => 0,
+			'libelle' => '', 
 			'reference' => date('y').strval(rand(100000,999999)),
-			'libelle' => '' ,
-			'categorie' => '',
-			'categorie_id' => 1,
-			'libelle' => '',
-			'fabricant_id' => 1,
-			'lieu' => '',
-			'lieu_id' => 3,
-			'vendeur' => '',
-			'facture_id' => 1,
 			'date_facture' => null,
 			'username' => '',
 			'utilisateur_id' => 1,

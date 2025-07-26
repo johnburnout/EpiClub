@@ -1,2 +1,5 @@
 <hr>
 <footer><small>Logiciel libre développé par <a href="mailto:jean@grimpe.fr">Jean Roussie</a> pour l'association <a href="https://perigord-escalade.fr">Périgord Escalade</a> à Sarlat (Dordogne).</small></footer>
+
+</body>
+</html>
