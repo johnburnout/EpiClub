@@ -1,6 +1,9 @@
 <?php
   
   //echo "appel fonctions_bdd.php ";
+  
+  require $root."includes/session.php";
+  require $root."includes/debug.php";
   //echo "appel creation_controle.php ";
   require $root."includes/bdd/creation_controle.php";
   //echo "appel creation_fiche.php ";

@@ -1,31 +1,9 @@
 <?php
     
-//  error_reporting(E_ALL);
-//  ini_set('display_errors', 1);
-//  ini_set('display_startup_errors', 1);
-    
-    // Configuration sécurisée des sessions
-    session_start([
-        'cookie_lifetime' => 86400, // 24h en secondes
-        'cookie_secure' => true,    // Uniquement en HTTPS
-        'cookie_httponly' => true,  // Empêche l'accès JS
-        'use_strict_mode' => true,  // Protection fixation session
-        'cookie_samesite' => 'Strict' // Protection CSRF
-    ]);
-    
-    //var_dump($_SESSION['csrf_token']);
-    
-    if (empty($_SESSION['csrf_token'])) {
-        $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
-    }
-    
-    // Chemin absolu pour plus de sécurité
-    define('ROOT_PATH', realpath(dirname(__FILE__)));
-    
     // Inclusion des fichiers de configuration
-    require ROOT_PATH . '/config.php';
-    // require ROOT_PATH . '/includes/common.php';
-    var_dump($username);
+    require __DIR__ . '/config.php';          // Fichier de configuration principal
+    require $root . "includes/common.php";
+
     // Initialisation
     $error_message = "";
     $isLoggedIn = isset($_SESSION['user_id']);
@@ -76,7 +54,7 @@
                 
                 // Requête préparée avec statement
                 $stmt = $mysqli->prepare("
-                SELECT id, username, password, role, last_login, controle_en_cours, facture_en_saisie 
+                SELECT id, username, password, role, last_login, controle_en_cours, facture_en_saisie, dev 
                 FROM utilisateur 
                 WHERE username = ? 
                 AND is_active = 1
@@ -100,7 +78,8 @@
                         $_SESSION['ip_address'] = $_SERVER['REMOTE_ADDR'];
                         $_SESSION['user_agent'] = $_SERVER['HTTP_USER_AGENT'];
                         $_SESSION['controle_en_cours'] = $user['controle_en_cours'];
-                        $_SESSION['facture_en_saisie'] = $user['facture_en_saisie'];                    
+                        $_SESSION['facture_en_saisie'] = $user['facture_en_saisie'];   
+                        $_SESSION['dev'] = $user['dev'];                   
                         // Mise à jour du last_login en base
                         $update_stmt = $mysqli->prepare("
                         UPDATE utilisateur 
@@ -134,35 +113,19 @@
     }
     //var_dump($_SESSION);
     // Affichage HTML
-?>
+    
+dev($_SESSION);?>
 <!DOCTYPE html>
 <html lang="fr">
     <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <meta http-equiv="X-UA-Compatible" content="ie=edge">
-        <title>Connexion - Gestionnaire EPI</title>
-        <?php include $root.'includes/header.php'; ?>
+        <?php include $root.'includes/head.php';?>
     </head>
     <body>
         <header style="text-align: right; padding: 10px;">
-            <?php if ($isLoggedIn): ?>
-            <form action="login.php" method="post" style="display: inline;">
-                <span>Connecté comme <?= htmlspecialchars($_SESSION['pseudo'], ENT_QUOTES, 'UTF-8') ?></span>
-                <input type="submit" name="deconnexion" value="Déconnexion" style="margin-left: 10px;">
-            </form>
-            <?php else: ?>
-            <a href="login.php" style="text-decoration: none;">Connexion</a>
-            <?php endif; ?>
+            <?php include $root.'includes/bandeau.php';?>
         </header>
-        <hr>
         
-        <div class="logo">
-            <h1>Gestionnaire EPI</h1>
-            <h2>Périgord Escalade</h2>
-            <img src="images/logo.png" width="200" alt="Logo" style="margin-top: 10px;">
-        </div>
-        <hr>
+        <?php include $root.'includes/en_tete.php';?>
         
         <div class="login-container">
             <?php if (!$isLoggedIn): ?>
@@ -185,7 +148,7 @@
                 </div>
                 
                 <div style="text-align: left; margin-top: 20px;">
-                    <input type="submit" name="connexion" value="Se connecter">
+                    <input class="btn btn-primary" type="submit" name="connexion" value="Se connecter">
                 </div>
             </form>
             
@@ -199,10 +162,15 @@
             </div>
             <?php endif; ?>
         </div>
-        
-        <footer style="text-align: left; margin-top: 40px; padding: 20px; border-top: 1px solid #eee;">
-            <p><a href="index.php">Retour à l'accueil</a></p>
-            <p>© <?= date('Y') ?> Périgord Escalade - Tous droits réservés</p>
-        </footer>
+        <div style="text-align: left;">
+        <form>            
+            <a href="index.php">
+                <input type="button" class="btn btn-secondary btn-block"value="Revenir à l'accueil">
+            </a>
+        </form>
+        </div>
     </body>
+    <footer>
+        <?php include $root . 'includes/bandeau_bas.php'; ?>
+    </footer>
 </html>

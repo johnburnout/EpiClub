@@ -1,43 +1,9 @@
 <?php
-    
-    //error_reporting(E_ALL);
-    //ini_set('display_errors', 1);
-    //ini_set('display_startup_errors', 1);
-    
-    // Démarrage de session sécurisé
-    session_start([
-        'cookie_httponly' => true,
-        'cookie_secure' => true,
-        'use_strict_mode' => true,
-        'cookie_samesite' => 'Strict'
-    ]);
-    //var_dump($_POST);
-    // Protection contre les attaques par fixation de session
-    if (empty($_SESSION['regenerate_time'])) {
-        session_regenerate_id(true);
-        $_SESSION['regenerate_time'] = time();
-    } elseif (time() - $_SESSION['regenerate_time'] > 1800) {
-        session_regenerate_id(true);
-        $_SESSION['regenerate_time'] = time();
-    }
-    
+
     // Inclusion des fichiers de configuration
     require __DIR__ . '/config.php';
     require $root . 'includes/common.php';
-    
-    // #############################
-    // Vérification connexion utilisateur
-    // #############################
-    
-    $isLoggedIn = !empty($_SESSION['pseudo']) && is_string($_SESSION['pseudo']);
-    $connect = $isLoggedIn ? "Connecté comme ".htmlspecialchars($_SESSION['pseudo']) : "Déconnecté";
-    $utilisateur = $isLoggedIn ? htmlspecialchars($_SESSION['pseudo'], ENT_QUOTES, 'UTF-8') : '';
-    
-    // Génération du token CSRF
-    if (empty($_SESSION['csrf_token'])) {
-        $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
-    }
-    
+
     // #############################
     // Initialisation des variables
     // #############################
@@ -131,33 +97,14 @@
 <!DOCTYPE html>
 <html lang="fr">
     <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Clôture contrôle - Gestionnaire EPI</title>
-        <?php include $root.'includes/header.php'; ?>
+        <?php include $root.'includes/head.php';?>
     </head>
     <body>
         <header style="text-align: right; padding: 10px;">
-            <?php if ($isLoggedIn): ?>
-            <form action="index.php" method="post" style="display: inline;">
-                <?php echo $connect; ?>
-                <button type="submit" name="deconnexion" class="btn btn-link">Déconnexion</button>
-            </form>
-            <?php else: ?>
-            <a href="login.php" class="btn btn-primary">Connexion</a>
-            <?php endif; ?>
+            <?php include $root.'includes/bandeau.php';?>
         </header>
-        <hr>
-        <div class="header-container">
-            <div class="logo-title">
-                <img src="images/logo.png" width="200" alt="Logo Périgord Escalade" class="img-fluid">
-                <div>
-                    <h1>Gestionnaire EPI</h1>
-                    <h2>Périgord Escalade</h2>
-                </div>
-            </div>
-        </div>
-        <hr>
+        
+        <?php include $root.'includes/en_tete.php';?>
         
         <main>
             <?php if ($avis): ?>
@@ -188,6 +135,8 @@
             </p>
         </main>
         
-        <?php require $root."includes/footer.php"; ?>
     </body>
+    <footer>
+        <?php include $root . 'includes/bandeau_bas.php'; ?>
+    </footer>
 </html>

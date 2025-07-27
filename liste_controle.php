@@ -1,43 +1,14 @@
 <?php
     
-    //error_reporting(E_ALL);
-    //ini_set('display_errors', 1);
-    //ini_set('display_startup_errors', 1);
-    
-    // Démarrage de session sécurisé
-    session_start([
-        'cookie_httponly' => true,
-        'cookie_secure' => true,
-        'use_strict_mode' => true,
-        'cookie_samesite' => 'Strict'
-    ]);
-    //var_dump($_SESSION);
-    //var_dump($_COOKIE);
-    // Protection contre les attaques par fixation de session
-    if (empty($_SESSION['regenerate_time'])) {
-        session_regenerate_id(true);
-        $_SESSION['regenerate_time'] = time();
-    } elseif (time() - $_SESSION['regenerate_time'] > 1800) {
-        session_regenerate_id(true);
-        $_SESSION['regenerate_time'] = time();
-    }
-    
     // Inclusion des fichiers de configuration
     require __DIR__ . '/config.php';
     require $root . 'includes/common.php';
     
-    // #############################
-    // Vérification connexion utilisateur
-    // #############################
     
-    $isLoggedIn = !empty($_SESSION['pseudo']) && is_string($_SESSION['pseudo']);
-    $connect = $isLoggedIn ? "Connecté comme ".htmlspecialchars($_SESSION['pseudo']) : "Déconnecté";
-    $utilisateur = $isLoggedIn ? htmlspecialchars($_SESSION['pseudo'], ENT_QUOTES, 'UTF-8') : '';
-    
-    // Génération du token CSRF
-    if (empty($_SESSION['csrf_token'])) {
-        $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
-    }
+    if (isset($_POST['id'])) {
+        header('Location: fiche_controle.php?id='.$_POST['id'].'&action=controler');
+        exit();
+    };
     
     // #############################
     // Initialisation variables
@@ -101,137 +72,131 @@
     $params = [];
     foreach ($defaults as $key => $default) {
         $input = $_POST[$key] ?? $_COOKIE[$key] ?? $default;
-            $params[$key] = sanitizeInput($input, is_numeric($default) ? 'int' : 'string');
-            }
-                $params['verification_id'] = intval($_SESSION['controle_en_cours']);
-                //var_dump($params);
-                // Gestion des cookies sécurisés
-                if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-                    $cookie_options = [
-                        'expires' => time() + 86400,
-                        'path' => '/',
-                        'secure' => true,
-                        'httponly' => true,
-                        'samesite' => 'Strict'
-                    ];
-                    setcookie('debut', (string)$params['debut'], $cookie_options);
-                    setcookie('long', (string)$params['long'], $cookie_options);
-                    setcookie('nblignes', (string)$params['nblignes'], $cookie_options);
-                }
+        $params[$key] = sanitizeInput($input, is_numeric($default) ? 'int' : 'string');
+    }
+    $params['verification_id'] = intval($_SESSION['controle_en_cours']);
+    //var_dump($params);
+    // Gestion des cookies sécurisés
+    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+        $cookie_options = [
+            'expires' => time() + 86400,
+            'path' => '/',
+            'secure' => true,
+            'httponly' => true,
+            'samesite' => 'Strict'
+        ];
+        setcookie('debut', (string)$params['debut'], $cookie_options);
+        setcookie('long', (string)$params['long'], $cookie_options);
+        setcookie('nblignes', (string)$params['nblignes'], $cookie_options);
+    }
+    
+    // #############################
+    // Création des listes d'options sécurisées
+    // #############################
+    $current_lieu_id = $params['lieu_id'];
+    $current_categorie_id = $params['cat_id'];
+    
+    $listeLieux = liste_options(['libelles' => 'lieu', 'id' => $current_lieu_id]);
+    $listeCategories = liste_options(['libelles' => 'categorie', 'id' => $current_categorie_id]);
+    
+    // ###################################
+    // Construction de la requête principale avec protection
+    // ###################################
+    $whereClauses = ["en_service = 1"];
+    $queryParams = [];
+    $types = '';
+    
+    if ($params['lieu_id'] > 0) {
+        $whereClauses[] = "lieu_id = ?";
+        $queryParams[] = $params['lieu_id'];
+        $types .= 'i';
+    }
+    
+    if ($params['cat_id'] > 0) {
+        $whereClauses[] = "categorie_id = ?";
+        $queryParams[] = $params['cat_id'];
+        $types .= 'i';
+    }
+    
+    if ($params['verification_id'] > 0) {
+        $whereClauses[] = "verification_id != ?";
+        $queryParams[] = $params['verification_id'];
+        $types .= 'i';
+    }
+            
+            
+    //*************
+    
+    // Combinaison des conditions WHERE
+    $where = empty($whereClauses) ? '' : 'WHERE ' . implode(' AND ', $whereClauses);
+
+    try {
+        // Requête pour le comptage total
+        $countSql = "SELECT COUNT(*) AS total FROM liste $where";
+        $countStmt = $connection->prepare($countSql);
+        
+        if (!empty($queryParams)) {
+            $countStmt->bind_param($types, ...$queryParams);
+        }
+        
+        $countStmt->execute();
+        $totalCount = $countStmt->get_result()->fetch_assoc()['total'];
+        $nblignes = (int)$totalCount;
+        $nbpages = ceil($nblignes / max(1, $params['long']));
+        
+    } catch (mysqli_sql_exception $e) {
+        die("Erreur lors de l'exécution de la requête: " . $e->getMessage());
+    }
+    
+    //**************
+        
+    $types .= 'ii';
+    $queryParams[] = (int)$params['debut']-1;
+    $queryParams[] = (int)$params['long'];
+    
+    $where = implode(' AND ', $whereClauses);
+    //var_dump($where);
+    // Validation du champ de tri
+    $allowedSort = ['id', 'ref', 'lieu_id', 'date_verification', 'fabricant'];
+    $sort = in_array($params['tri'], $allowedSort) ? $params['tri'] : 'id';
+    // ###########################
+    // Recherche dans la base avec pagination sécurisée
+    // ###########################
+            try {
+                // Requête SQL avec un seul LIMIT
+                $sql = "SELECT id, ref, libelle, fabricant, categorie, categorie_id, 
+                lieu, lieu_id, nb_elements, date_verification, date_max
+                FROM liste 
+                WHERE $where 
+                ORDER BY $sort 
+                LIMIT ?, ?";
                 
-                // #############################
-                // Création des listes d'options sécurisées
-                // #############################
-                $current_lieu_id = $params['lieu_id'];
-                $current_categorie_id = $params['cat_id'];
+                //dev($sql); dev($where); dev($queryParams); dev($types); 
+                $stmt = $connection->prepare($sql);
                 
-                $listeLieux = liste_options(['libelles' => 'lieu', 'id' => $current_lieu_id]);
-                $listeCategories = liste_options(['libelles' => 'categorie', 'id' => $current_categorie_id]);
+//              $limit = max(1, min($params['long'], 100)); // Limite à 100 max par page
+//              $offset = max(0, ($params['debut'] - 1) * $limit);
                 
-                // ###################################
-                // Construction de la requête principale avec protection
-                // ###################################
-                $whereClauses = ["en_service = 1"];
-                $queryParams = [];
-                $types = '';
-                
-                if ($params['lieu_id'] > 0) {
-                    $whereClauses[] = "lieu_id = ?";
-                    $queryParams[] = $params['lieu_id'];
-                    $types .= 'i';
-                }
-                
-                if ($params['cat_id'] > 0) {
-                    $whereClauses[] = "categorie_id = ?";
-                    $queryParams[] = $params['cat_id'];
-                    $types .= 'i';
-                }
-                
-                if ($params['verification_id'] > 0) {
-                    $whereClauses[] = "verification_id != ?";
-                    $queryParams[] = $params['verification_id'];
-                    $types .= 'i';
-                }
-                
-                $where = implode(' AND ', $whereClauses);
-                //var_dump($where);
-                // Validation du champ de tri
-                $allowedSort = ['id', 'ref', 'lieu_id', 'date_verification', 'fabricant'];
-                $sort = in_array($params['tri'], $allowedSort) ? $params['tri'] : 'id';
-                
-                // ###########################
-                // Recherche dans la base avec pagination sécurisée
-                // ###########################
-                try {
-                    // Requête pour le comptage total
-                    $countSql = "SELECT COUNT(*) AS total FROM liste WHERE $where";
-                    $countStmt = $connection->prepare($countSql);
-                    
-                    if (!empty($queryParams)) {
-                        $countStmt->bind_param($types, ...$queryParams);
-                    }
-                    
-                    $countStmt->execute();
-                    $totalCount = $countStmt->get_result()->fetch_assoc()['total'];
-                    $nblignes = (int)$totalCount;
-                    $nbpages = ceil($nblignes / max(1, $params['long']));
-                    
-                    // Requête pour les données paginées
-                    $sql = "SELECT id, ref, libelle, fabricant, categorie, categorie_id, 
-                    lieu, lieu_id, nb_elements, date_verification, date_max
-                    FROM liste 
-                    WHERE $where 
-                    ORDER BY $sort 
-                    LIMIT ? OFFSET ?";
-                    
-                    $stmt = $connection->prepare($sql);
-                    
-                    $limit = max(1, min($params['long'], 100)); // Limite à 100 max par page
-                    $offset = max(0, ($params['debut'] - 1) * $limit);
-                    
-                    if (!empty($queryParams)) {
-                        $stmt->bind_param($types.'ii', ...array_merge($queryParams, [$limit, $offset]));
-                    } else {
-                        $stmt->bind_param('ii', $limit, $offset);
-                    }
-                    
-                    $stmt->execute();
-                    $result = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
-                } catch (mysqli_sql_exception $e) {
-                    error_log("[" . date('Y-m-d H:i:s') . "] Erreur DB: " . $e->getMessage());
-                    die("Une erreur est survenue lors de la récupération des données. Veuillez réessayer.". $e->getMessage());
-                }
+                $stmt->bind_param($types, ...$queryParams);
+
+                $stmt->execute();
+                $result = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+            } catch (mysqli_sql_exception $e) {
+                error_log("[" . date('Y-m-d H:i:s') . "] Erreur DB: " . $e->getMessage());
+                die("Une erreur est survenue lors de la récupération des données. Veuillez réessayer.");
+            }    $connection->close();
 ?>
 <!DOCTYPE html>
 <html lang="fr">
     <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Liste EPI - Gestionnaire EPI</title>
-        <?php include $root.'includes/header.php'; ?>
+        <?php include $root.'includes/head.php';?>
     </head>
     <body>
         <header style="text-align: right; padding: 10px;">
-            <?php if ($isLoggedIn): ?>
-            <form action="index.php" method="post" style="display: inline;">
-                <?php echo $connect; ?>
-                <button type="submit" name="deconnexion" class="btn btn-link">Déconnexion</button>
-            </form>
-            <?php else: ?>
-            <a href="login.php" class="btn btn-primary">Connexion</a>
-            <?php endif; ?>
+            <?php include $root.'includes/bandeau.php';?>
         </header>
-        <hr>
-        <div class="header-container">
-            <div class="logo-title">
-                <img src="images/logo.png" width="200" alt="Logo Périgord Escalade" class="img-fluid">
-                <div>
-                    <h1>Gestionnaire EPI</h1>
-                    <h2>Périgord Escalade</h2>
-                </div>
-            </div>
-        </div>
-        <hr>
+        
+        <?php include $root.'includes/en_tete.php';?>
         
         <?php if ($isLoggedIn): ?>
         <h3>Filtrer les données</h3>
@@ -243,9 +208,7 @@
                     <tr>
                         <th colspan="2">Filtrer par :</th>
                         <th colspan="2">Trier par :</th>
-                        <th>Nb de lignes par page:</th>
-                        <th>Page :</th>
-                    </tr>
+                        <th>Nb de lignes par page:</th>                    </tr>
                     <tr>
                         <td>Lieu</td>
                         <td>Catégorie</td>
@@ -260,9 +223,6 @@
                         </td>
                         <td colspan="2" rowspan="2">
                             <input type="number" name="long" min="5" max="100" step="5" value="<?= $params['long'] ?>">
-                        </td>
-                        <td rowspan="2">
-                            <input type="number" name="debut" min="1" max="<?= $nbpages ?>" value="<?= ceil($params['debut'] / $params['long']) ?>">
                         </td>
                     </tr>
                     <tr>
@@ -280,7 +240,7 @@
                 </thead>
             </table>
             <p>
-                <input type="submit" name="choix" value="Filtrer et trier">
+                <input class="btn btn-secondary" type="submit" name="choix" value="Filtrer et trier">
             </p>
         </form>
         
@@ -288,7 +248,7 @@
         <hr>
         <h3>Liste des EPI (<?= $nblignes ?> résultats)</h3>
         
-        <form method="get" action="fiche_controle.php">
+        <form method="post">
             <table>
                 <thead>
                     <tr>
@@ -306,7 +266,7 @@
                 <tbody>
                     <?php foreach ($result as $row): ?>
                     <tr>
-                        <td><input type="radio" name="id" required value="<?= (int)$row['id'] ?>"></td>
+                        <td><input type="radio" name="id" value="<?= (int)$row['id'] ?>"></td>
                         <td><?= htmlspecialchars($row['ref'], ENT_QUOTES, 'UTF-8') ?></td>
                         <td><?= htmlspecialchars($row['libelle'], ENT_QUOTES, 'UTF-8') ?></td>
                         <td><?= htmlspecialchars($row['fabricant'], ENT_QUOTES, 'UTF-8') ?></td>
@@ -323,17 +283,18 @@
             <!-- Pagination -->
             <?php if ($nbpages > 1): ?>
             <div class="pagination">
-                <button type="submit" name="debut" value="1" <?= $params['debut'] <= 1 ? 'disabled' : '' ?>>Première</button>
-                <button type="submit" name="debut" value="<?= max(1, $params['debut'] - $params['long']) ?>" <?= $params['debut'] <= 1 ? 'disabled' : '' ?>>Précédente</button>
+                <button class="btn btn-secondary" type="submit" name="debut" value="1" <?= $params['debut'] <= 1 ? 'disabled' : '' ?>>Première</button>
+                <button class="btn btn-secondary" type="submit" name="debut" value="<?= max(1, $params['debut'] - $params['long']) ?>" <?= $params['debut'] <= 1 ? 'disabled' : '' ?>>Précédente</button>
                 <span>Page <?= ceil($params['debut'] / $params['long']) ?> sur <?= $nbpages ?></span>
-                <button type="submit" name="debut" value="<?= min($nblignes, $params['debut'] + $params['long']) ?>" <?= $params['debut'] + $params['long'] > $nblignes ? 'disabled' : '' ?>>Suivante</button>
-                <button type="submit" name="debut" value="<?= max(1, ($nbpages - 1) * $params['long'] + 1) ?>" <?= $params['debut'] + $params['long'] > $nblignes ? 'disabled' : '' ?>>Dernière</button>
+                <button  class="btn btn-secondary" type="submit" name="debut" value="<?= min($nblignes, $params['debut'] + $params['long']) ?>" <?= $params['debut'] + $params['long'] > $nblignes ? 'disabled' : '' ?>>Suivante</button>
+                <button  class="btn btn-secondary" type="submit" name="debut" value="<?= max(1, ($nbpages - 1) * $params['long'] + 1) ?>" <?= $params['debut'] + $params['long'] > $nblignes ? 'disabled' : '' ?>>Dernière</button>
             </div>
             <?php endif; ?>
             
             <p>               
-                <input type="hidden" name="action" value="affichage">            
-                <input type="submit" name="submit" value="Contrôler">
+                <input type="hidden" name="action" value="affichage">              
+                <input type="hidden" name="long" value="<?= $params['long'] ;?>">            
+                <input class="btn btn-primary" type="submit" name="submit" value="Contrôler">
             </p>
         </form>
         <?php else: ?>
@@ -351,7 +312,8 @@
                 <input type="hidden" name="csrf_token" value="<?= $_SESSION['csrf_token'] ?>">
                 <input type="hidden" name="controle_id" value="<?= (int)$controle_id ?>">
                 <input type="hidden" name="retour" value="index.php">                
-                <input type="hidden" name="action" value="affichage">
+                <input type="hidden" name="action" value="affichage">              
+                <input type="hidden" name="long" value="<?= $params['long'] ;?>">
                 <input type="submit" name="terminer" value="Terminer le contrôle en cours"  class="btn btn-primary">
             </form>
         </div>
@@ -363,9 +325,8 @@
         </div>
         <?php endif; ?>
         
-        <?php 
-            $connection->close();
-            require $root."includes/footer.php"; 
-        ?>
     </body>
+    <footer>
+        <?php include $root . 'includes/bandeau_bas.php'; ?>
+    </footer>
 </html>

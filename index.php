@@ -1,87 +1,26 @@
 <?php
-    
-    //error_reporting(E_ALL);
-    //ini_set('display_errors', 1);
-    //ini_set('display_startup_errors', 1);
-    
-    // Démarrage de session sécurisé
-    session_start([
-        'cookie_httponly' => true,
-        'cookie_secure' => true,
-        'use_strict_mode' => true
-    ]);
-    
-    
-    // Génération du token CSRF
-    if (empty($_SESSION['csrf_token'])) {
-        $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
-    };
-    
-    //var_dump($_COOKIE);
-    //var_dump($_SESSION);
-    
-    // Inclusion des fichiers de configuration avec vérification
-    
-    require 'config.php';
-    //require $root .'styles/style.css';
-    require $root . 'includes/fonctions_edition.php';
-    
-    // Gestion de la déconnexion
-    if (isset($_POST['deconnexion'])) {
-        $_SESSION = array();
-        session_destroy();
-        header('Location: index.php');
-        exit;
-    }
-    
-    // #############################
-    // Verification connexion
-    // #############################
-    $isLoggedIn = !empty($_SESSION['pseudo']);
-    $connect = $isLoggedIn ? "Connecté comme ".htmlspecialchars($_SESSION['pseudo']) : "Déconnecté";
-    
-    // #############################
-    // Initialisation variables
-    // #############################
+        
+    require __DIR__ . '/config.php';
+    require $root . 'includes/common.php';
     
     if ($isLoggedIn) {
         $controle = $_SESSION['controle_en_cours'] ? "liste_controle.php" : "controle_creation.php" ;
         $facture = $_SESSION['facture_en_saisie'] ? "liste_facture.php" : "facture_creation.php" ;
     }
-    
 ?>
 
 <!DOCTYPE html>
 <html lang="fr">
     <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Connexion - Gestionnaire EPI</title>
-        <?php include $root.'includes/header.php';?>
+        <?php include $root.'includes/head.php';?>
     </head>
     <body>
         <header style="text-align: right; padding: 10px;">
-            <?php if ($isLoggedIn): ?>
-            <form action="index.php" method="post" style="display: inline;">
-                <?php echo $connect; ?>
-                <button type="submit" name="deconnexion" class="btn btn-link">Déconnexion</button>
-            </form>
-            <?php else: ?>
-            <a href="login.php" class="btn btn-primary">Connexion</a>
-            <?php endif; ?>
+            <?php include $root.'includes/bandeau.php';?>
         </header>
-        <div class="container">
-            <div class="row">
-                <div class="col-md-8">
-                    <h1>Gestionnaire EPI</h1>
-                    <h2>Périgord Escalade</h2>
-                </div>
-                <div class="col-md-4 text-right">
-                    <img src="images/logo.png" width="200" alt="Logo Périgord Escalade" class="img-fluid">
-                </div>
-            </div>
-        </div>
-        <hr>
+        
+        <?php include $root.'includes/en_tete.php';?>
+        
         <?php if ( !$isLoggedIn): ?>
         <h3>Version de test</h3>
         <p>
@@ -99,7 +38,7 @@
         <?php endif; ?>
         <?php if (count($_SESSION) > 0): ?>
         <main class="container">
-            <h3>Gestionnaire des EPI</h3>
+            <h3>Accueil</h3>
             
             <div class="row mt-4">
                 <div class="col-md-6">
@@ -107,7 +46,7 @@
                         <div class="card-body">
                             <h5 class="card-title">Consultation</h5>
                             <p>
-                                <?php if ($isLoggedIn and ($_SESSION['role'] == 'admin')): ?>    
+                                <?php if ($isLoggedIn and ($_SESSION['role'] == 'admin') and false): ?>    
                                 <form action="fiche_creation.php" method="post" class="mb-3">
                                     <input type="hidden" name="appel_liste" value="0">
                                     <input type="hidden" name="id" value="0">  
@@ -120,7 +59,7 @@
                             </p>
                             <p>
                                 <form action="liste_selection.php" method="post">
-                                    <button type="submit" class="btn btn-info btn-block">Consulter la liste des EPI</button>
+                                    <button type="submit" class="btn btn-primary btn-block">Consulter la liste des EPI</button>
                                 </form>
                             </p>
                         </div>
@@ -133,7 +72,7 @@
                         <input type="hidden" name="action" value="creation">
                         <input type="hidden" name="id" value="<?= $_SESSION['controle_en_cours']; ?>"> 
                         <input type="hidden" name="csrf_token" value="<?= $_SESSION['csrf_token'] ?>">
-                        <button type="submit" class="btn btn-warning btn-block">Contrôler les EPI</button>
+                        <button type="submit"  class="btn btn-primary btn-block">Contrôler les EPI</button>
                     </form>
                     </p>
                     <?php if ($_SESSION['role'] == 'admin'): ?>
@@ -141,7 +80,7 @@
                         <form action="<?= $facture; ?>" method="post">
                             <input type="hidden" name="action" value="creation">
                             <input type="hidden" name="csrf_token" value="<?= $_SESSION['csrf_token'] ?>">
-                            <button type="submit" class="btn btn-success btn-block">Saisir une facture</button>
+                            <button type="submit"  class="btn btn-primary btn-block">Saisir une facture</button>
                         </form>
                     </p>
                     <?php endif; ?>
@@ -158,6 +97,8 @@
         </div>
         <?php endif; ?>
         
-        <?php include $root . 'includes/footer.php'; ?>
     </body>
+    <footer>
+        <?php include $root . 'includes/bandeau_bas.php'; ?>
+    </footer>
 </html>
