@@ -6,9 +6,6 @@
   */
   
   $host       = "localhost"; //adresse du serveur mySQL
-  //$host= "ns3126637.ip-51-68-33.eu";
-  //$username   = "jean";
-  //$password   = "xF]*/Jeul2QDGUr/";
   $username = "votre login mysql";
   $password = "votre mdp mysql";
   $dbname     = "epi";
