@@ -4,6 +4,7 @@
     require $root . 'includes/common.php';
     
     if ($isLoggedIn) {
+        $controle_id = isset($_SESSION['controle_en_cours']) ? (int)$_SESSION['controle_en_cours'] : 0;
         $controle = $_SESSION['controle_en_cours'] ? "liste_controle.php" : "controle_creation.php" ;
         $facture = $_SESSION['facture_en_saisie'] ? "liste_facture.php" : "facture_creation.php" ;
     }
@@ -70,7 +71,7 @@
                     <h5 class="card-title">Autres fonctionnalités</h5>
                     <p><form action="<?= $controle; ?>" method="post" class="mb-3">
                         <input type="hidden" name="action" value="creation">
-                        <input type="hidden" name="id" value="<?= $_SESSION['controle_en_cours']; ?>"> 
+                        <input type="hidden" name="controle_id" value="<?= $_SESSION['controle_en_cours']; ?>"> 
                         <input type="hidden" name="csrf_token" value="<?= $_SESSION['csrf_token'] ?>">
                         <button type="submit"  class="btn btn-primary btn-block">Contrôler les EPI</button>
                     </form>

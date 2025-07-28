@@ -21,7 +21,7 @@
     
     $defaults = [
         'action' => 'creation',
-        'id' => 0,
+        'controle_id' => 0,
         'utilisateur' => $utilisateur,
         'remarques' => '',
         'date_verification' => date('Y-m-d'),
@@ -33,15 +33,15 @@
     
     foreach ($defaults as $key => $value) {
         $donnees[$key] = htmlspecialchars($value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?? $value;
-        if (in_array($key, ['id'])) {
+        if (in_array($key, ['controle_id'])) {
             $donnees[$key] = (int)$donnees[$key];
         }
     }
     
     //var_dump($_POST);
     // Récupération de l'ID
-    $donnees['id'] = isset($_SESSION['controle_en_cours']) ? intval($_SESSION['controle_en_cours']) : 0 ;
-    $isStarted = ($donnees['id'] != 0);
+    $donnees['controle_id'] = isset($_SESSION['controle_en_cours']) ? intval($_SESSION['controle_en_cours']) : 0 ;
+    $isStarted = ($donnees['controle_id'] != 0);
     
     //var_dump($isStarted);
     //var_dump($isLoggedIn);
@@ -64,16 +64,16 @@
                 if (!$creation['success']) {
                     throw new Exception('Erreur lors de la création: ' . ($creation['error'] ?? ''));
                 }
-                $donnees['id'] = $creation['id'];
-                $_SESSION['controle_en_cours'] = $donnees['id'];
+                $donnees['controle_id'] = $creation['controle_id'];
+                $_SESSION['controle_en_cours'] = $donnees['controle_id'];
                 $isStarted = true;
                 $donnees['success'] = "Nouveau contrôle créé avec succès.";
             }
             //        var_dump($donnees);
             
             // Lecture des données après création/mise à jour
-            if ($donnees['id'] > 0) {
-                $result = lecture_controle($donnees['id'], $utilisateur);
+            if ($donnees['controle_id'] > 0) {
+                $result = lecture_controle($donnees['controle_id'], $utilisateur);
                 if (!$result['success']) {
                     throw new Exception('Erreur lors de la lecture: ' . ($result['error'] ?? ''));
                 }
@@ -91,7 +91,7 @@
                     $maj = mise_a_jour_controle([
                         'remarques' => $donnees['remarques'],
                         'utilisateur' => $utilisateur
-                    ], $donnees['id']);
+                    ], $donnees['controle_id']);
                     if (!$maj['success']) {
                         throw new Exception('Erreur lors de la mise à jour: ' . ($valid['error'] ?? ''));
                     }
@@ -106,9 +106,9 @@
         
         // Journalisation
         if (isset($maj['success']) or isset($creation['success'])) {
-            $journalcontrole = $root.'enregistrements/journalcontrole'.$donnees['id'].'.txt';
+            $journalcontrole = $root.'enregistrements/journalcontrole'.$donnees['controle_id'].'.txt';
             $journal = $root.'enregistrements/journal'.date('Y').'.txt';
-            $id = $donnees['id'];
+            $controle_id = $donnees['controle_id'];
             
             // Vérification des chemins avant écriture
             $allowedPath = $root.'enregistrements/';
@@ -123,7 +123,7 @@
                     }
                 }
                 
-                $ajoutjournal = '-----'.PHP_EOL."controle $id ".date('Y/m/d')." $utilisateur".PHP_EOL;
+                $ajoutjournal = '-----'.PHP_EOL."controle $controle_id ".date('Y/m/d')." $utilisateur".PHP_EOL;
                 if (!empty($modifications)) {
                     $ajoutjournal .= implode(PHP_EOL, $modifications).PHP_EOL;
                 }
@@ -137,36 +137,12 @@
             }
         }
     }
-    // Traitement des champs du formulaire
-    //      $donnees['remarques'] = isset($_POST['remarques']) 
-    //          ? htmlspecialchars(trim($_POST['remarques']), ENT_QUOTES, 'UTF-8') 
-    //          : '';
-    //          
-    //          // Mise à jour si contrôle existant
-    //          if ($isStarted && $action === 'maj') {
-    //              $maj = mise_a_jour_controle([
-    //                  'remarques' => $donnees['remarques'],
-    //                  'utilisateur' => $utilisateur
-    //              ], $donnees['id']);
-    //              
-    //              if ($maj['success']) {
-    //                  $donnees['success'] = "Contrôle mis à jour avec succès.";
-    //              } else {
-    //                  $donnees['error'] = $maj['error'] ?? "Erreur lors de la mise à jour.";
-    //              }
-    //          }
-    //      } catch (Exception $e) {
-    //          error_log("[" . date('Y-m-d H:i:s') . "] Erreur: " . $e->getMessage());
-    //          $donnees['error'] = "Une erreur technique est survenue.";
-    //      }
-    //  }
-    
-    //var_dump($donnees);
+
     $viewData = [
         'date_verification' => $donnees['date_verification'],
         'remarques' => htmlspecialchars($donnees['remarques'] ?? '', ENT_QUOTES, 'UTF-8'),
         'action' => htmlspecialchars($action, ENT_QUOTES, 'UTF-8'),
-        'id' => (int)$donnees['id'],
+        'controle_id' => (int)$donnees['controle_id'],
         'isEditMode' => $validation === 'maj',
         'isNewMode' => $validation === 'creation'
     ];
@@ -197,7 +173,7 @@
             <form method="post" id="form-controle">
                 <input type="hidden" name="csrf_token" value="<?= $_SESSION['csrf_token'] ?>">
                 <input type="hidden" name="action" value="<?= $isStarted ? 'maj' : 'creation' ?>">
-                <input type="hidden" name="id" value="<?= $donnees['id'] ?>">
+                <input type="hidden" name="controle_id" value="<?= $donnees['controle_id'] ?>">
                 
                 <table>
                     <tbody>
@@ -221,7 +197,7 @@
                 <div class="form-actions">
                     
                     <?php if ($isStarted): ?>
-                    <a href="controle_effacer.php?id=<?= $donnees['id'] ?>"
+                    <a href="controle_effacer.php?id=<?= $donnees['controle_id'] ?>"
                         onclick="return confirm('Êtes-vous sûr de vouloir supprimer supprimer définitivement ce contrôle ?')">
                         <input type="button"  class="btn btn-danger" value="Annuler le contrôle" name="supprimer">
                     </a>
