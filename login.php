@@ -1,131 +1,176 @@
 <?php
-session_start();
+    
+    // Inclusion des fichiers de configuration
+    require __DIR__ . '/config.php';          // Fichier de configuration principal
+    require $root . "includes/common.php";
 
-require "header.php";
-require "config.php";  
-require "common.php";
-
-  
-  # #############################
-  # verification connexion
-  # #############################
-
-  
-  if (count($_SESSION) > 0)	
-    {
-      $connect = "Connecté comme ".$_SESSION['pseudo']." : ";
-    }
-  else
-    {
-      $connect = "Déconnecté";
-    }
-
-  # #############################
-  # Création de la connection à la base
-  # #############################
-
-
-  
-mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
-
-/*
-Page: connexion.php
-*/
-//à mettre tout en haut du fichier .php, cette fonction propre à PHP servira à maintenir la $_SESSION
-
-//si le bouton "Connexion" est cliqué
-if(isset($_POST['connexion'])){
-  // on vérifie que le champ "Pseudo" n'est pas vide
-  // empty vérifie à la fois si le champ est vide et si le champ existe belle et bien (is set)
-  if(empty($_POST['pseudo'])){
-    echo "Le champ Pseudo est vide.";
-  } else {
-    // on vérifie maintenant si le champ "Mot de passe" n'est pas vide"
-    if(empty($_POST['mdp'])){
-      echo "Le champ Mot de passe est vide.";
-    } else {
-      
-      // les champs pseudo & mdp sont bien postés et pas vides, on sécurise les données entrées par l'utilisateur
-      //le htmlentities() passera les guillemets en entités HTML, ce qui empêchera en partie, les injections SQL
-      $Pseudo = htmlentities($_POST['pseudo'], ENT_QUOTES, "UTF-8"); 
-      $MotDePasse = htmlentities($_POST['mdp'], ENT_QUOTES, "UTF-8");
-      //on se connecte à la base de données:
-      $mysqli = mysqli_connect($host, $username, $password, $dbname);
-      //on vérifie que la connexion s'effectue correctement:
-      if(!$mysqli){
-        echo "Erreur de connexion à la base de données.";
-      } else {
-        //on fait maintenant la requête dans la base de données pour rechercher si ces données existent et correspondent:
-        //si vous avez enregistré le mot de passe en md5() il vous faudra faire la vérification en mettant mdp = '".md5($MotDePasse)."' au lieu de mdp = '".$MotDePasse."'
-        $Requete = mysqli_query($mysqli,"SELECT * FROM utilisateur WHERE username = '".$Pseudo."' AND password = '".$MotDePasse."'");
-        //si il y a un résultat, mysqli_num_rows() nous donnera alors 1
-        //si mysqli_num_rows() retourne 0 c'est qu'il a trouvé aucun résultat
-        if(mysqli_num_rows($Requete) == 0) {
-          echo "Le pseudo ou le mot de passe est incorrect, le compte n'a pas été trouvé.";
-        } else {
-          //on ouvre la session avec $_SESSION:
-          //la session peut être appelée différemment et son contenu aussi peut être autre chose que le pseudo
-          $_SESSION['pseudo'] = $Pseudo;
-          echo "Vous êtes à présent connecté !";
+    // Initialisation
+    $error_message = "";
+    $isLoggedIn = isset($_SESSION['user_id']);
+    
+    // Traitement de la déconnexion
+    if (isset($_POST['deconnexion'])) {
+        // Nettoyage complet de la session
+        $_SESSION = [];
+        
+        // Invalide le cookie de session
+        if (ini_get("session.use_cookies")) {
+            $params = session_get_cookie_params();
+            setcookie(
+                session_name(), 
+                '', 
+                time() - 42000,
+                $params["path"], 
+                $params["domain"],
+                $params["secure"], 
+                $params["httponly"]
+            );
         }
-      }
+        
+        // Destruction et redirection
+        if (!isset($_POST['csrf_token']) || !hash_equals($_SESSION['csrf_token'], $_POST['csrf_token'])) {
+            die('Erreur de sécurité: Token CSRF invalide');
+        }
+        session_unset();
+        session_destroy();
+        header('Location: login.php');
+        exit;
     }
-  }
-}
-?>
-
-<!-- 
-Les balises <form> servent à dire que c'est un formulaire
-on lui demande de faire fonctionner la page connexion.php une fois le bouton "Connexion" cliqué
-on lui dit également que c'est un formulaire de type "POST" (récupéré via $_POST en PHP)
-Les balises <input> sont les champs de formulaire
-type="text" sera du texte
-type="password" sera des petits points noir (texte caché)
-type="submit" sera un bouton pour valider le formulaire
-name="nom de l'input" sert à le reconnaitre une fois le bouton submit cliqué, pour le code PHP (récupéré via $_POST["nom de l'input"] en PHP)
--->
-
-<body><p align="right">
-  <?php 
-    if (count($_SESSION) > 0)
-  { ?>
-  <form action="index.php" method="post"><?php echo $connect." "; ?><input type='submit' name="deconnexion" value="Déconnexion"></form><?php  
+    
+    // Traitement du formulaire de connexion
+    if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['connexion'])) {
+        // Validation des champs
+        if (empty($_POST['pseudo']) || empty($_POST['mdp'])) {
+            $error_message = "Tous les champs doivent être remplis";
+        } else {
+            // Nettoyage des entrées
+            $pseudo = trim($_POST['pseudo']);
+            $mdp = $_POST['mdp'];
+            
+            try {
+                // Connexion sécurisée à la base
+                $mysqli = new mysqli($host, $username, $password, $dbname);
+                $mysqli->set_charset("utf8mb4");
+                
+                // Requête préparée avec statement
+                $stmt = $mysqli->prepare("
+                SELECT id, username, password, role, last_login, controle_en_cours, facture_en_saisie, dev 
+                FROM utilisateur 
+                WHERE username = ? 
+                AND is_active = 1
+                LIMIT 1
+            ");
+                $stmt->bind_param("s", $pseudo);
+                $stmt->execute();
+                
+                $result = $stmt->get_result();
+                
+                if ($result->num_rows === 1) {
+                    $user = $result->fetch_assoc();
+                    
+                    // Vérification du mot de passe (password_verify pour les hash)
+                    if ($mdp == $user['password']) {
+                        // Authentification réussie
+                        $_SESSION['user_id'] = $user['id'];
+                        $_SESSION['pseudo'] = $user['username'];
+                        $_SESSION['role'] = $user['role'];
+                        $_SESSION['last_login'] = time();
+                        $_SESSION['ip_address'] = $_SERVER['REMOTE_ADDR'];
+                        $_SESSION['user_agent'] = $_SERVER['HTTP_USER_AGENT'];
+                        $_SESSION['controle_en_cours'] = $user['controle_en_cours'];
+                        $_SESSION['facture_en_saisie'] = $user['facture_en_saisie'];   
+                        $_SESSION['dev'] = $user['dev'];                   
+                        // Mise à jour du last_login en base
+                        $update_stmt = $mysqli->prepare("
+                        UPDATE utilisateur 
+                        SET last_login = NOW() 
+                        WHERE id = ?
+                    ");
+                        $update_stmt->bind_param("i", $user['id']);
+                        $update_stmt->execute();
+                        $update_stmt->close();
+                        
+                        // Régénération de l'ID de session
+                        session_regenerate_id(true);
+                        
+                        // Redirection sécurisée
+                        header('Location: index.php');
+                        exit;
+                    }
+                }
+                
+                // Message d'erreur générique pour éviter l'enumération
+                $error_message = "Identifiants incorrects";
+                usleep(random_int(1000000, 3000000)); // Délai aléatoire
+                
+                $stmt->close();
+                $mysqli->close();
+            } catch (mysqli_sql_exception $e) {
+                error_log("Login error: ".$e->getMessage());
+                $error_message = "Erreur système. Veuillez réessayer.";
+            }
+        }
     }
-    else 
-  { ?>
-  <a href=login.php>Connection</a><?php
-    }
-  ?></p>
-  <hr>
-  <table>
-    <tr>
-      <td> <h1>Gestionnaire EPI</h1></td><td rowspan=2><img src="images/logo.png" width="200"></td>
-    </tr>
-    <tr><td><h2>Périgord Escalade</h2></td></tr>
-  </table>
-<hr>  
-<?php
-
-if (count($_SESSION) == 0)
-{ ?>
-  
-<h3>Se connecter</h3>
-<p>Logiciel accessible aux gestionnaires des EPI et encadrants du club 
-  <a href="https://perigord-escalade.fr" target="blank">Périgord Escalade</a></p>
-<p>Pour un accès, demander à <a href="mailto:jean@roussie.net">Jean Roussie</a>.</p>
-<form action="login.php" method="post">
-  <table>
-    <tr><td>Pseudo : </td><td>  <input type="text" name="pseudo" /></td></tr>
-      <tr><td>Mot de passe : </td><td><input type="password" name="mdp" /></td> </tr>
-  </table>
-  <p><input type="submit" name="connexion" value="Connexion" /></p>
-</form>
-<?php
-};
-?>
-
-<p>
-  <a href="index.php"><strong>Retour à l'accueil</strong></a> - Revenir à l'accueil
-</p>
-
-<?php require "footer.php"; ?>
+    //var_dump($_SESSION);
+    // Affichage HTML
+    
+dev($_SESSION);?>
+<!DOCTYPE html>
+<html lang="fr">
+    <head>
+        <?php include $root.'includes/head.php';?>
+    </head>
+    <body>
+        <header style="text-align: right; padding: 10px;">
+            <?php include $root.'includes/bandeau.php';?>
+        </header>
+        
+        <?php include $root.'includes/en_tete.php';?>
+        
+        <div class="login-container">
+            <?php if (!$isLoggedIn): ?>
+            <h3 style="text-align: left;">Connexion à l'espace gestion</h3>
+            <p style="text-align: left;">Accès réservé aux membres habilités du club.</p>
+            
+            <?php if (!empty($error_message)): ?>
+            <div class="error"><?= htmlspecialchars($error_message, ENT_QUOTES, 'UTF-8') ?></div>
+            <?php endif; ?>
+            
+            <form action="login.php" method="post">
+                <div>
+                    <label for="pseudo">Identifiant :</label>
+                    <input type="text" id="pseudo" name="pseudo" required autofocus>
+                </div>
+                
+                <div>
+                    <label for="mdp">Mot de passe :</label>
+                    <input type="password" id="mdp" name="mdp" required>
+                </div>
+                
+                <div style="text-align: left; margin-top: 20px;">
+                    <input class="btn btn-primary" type="submit" name="connexion" value="Se connecter">
+                </div>
+            </form>
+            
+            <div style="margin-top: 20px; text-align: left;">
+                <p>Pour obtenir un accès, contactez <a href="mailto:contact@perigord-escalade.fr">l'administrateur</a>.</p>
+            </div>
+            <?php else: ?>
+            <div style="text-align: left;">
+                <p>Vous êtes déjà connecté.</p>
+                <p><a href="index.php">Accéder à l'interface</a></p>
+            </div>
+            <?php endif; ?>
+        </div>
+        <div style="text-align: left;">
+        <form>            
+            <a href="index.php">
+                <input type="button" class="btn btn-secondary btn-block"value="Revenir à l'accueil">
+            </a>
+        </form>
+        </div>
+    </body>
+    <footer>
+        <?php include $root . 'includes/bandeau_bas.php'; ?>
+    </footer>
+</html>

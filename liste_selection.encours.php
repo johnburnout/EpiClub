@@ -1,12 +1,7 @@
 <?php
-
+    
     require __DIR__ . '/config.php';          // Fichier de configuration principal
     require $root.'includes/common.php';  // Fonctions communes
-    
-    if (isset($_POST['id'])) {
-        header('Location: fiche_controle.php?id='.$_POST['id'].'&action=affichage&retour=liste_selection.php');
-        exit();
-    };
     
     // ##############################################
     // CONNEXION À LA BASE DE DONNÉES AVEC GESTION D'ERREURS
@@ -16,20 +11,19 @@
     mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
     
     try {
-        // Création de la connexion MySQLi
         $connection = new mysqli($host, $username, $password, $dbname);
-        
-        // Définition du charset pour supporter tous les caractères (y compris émojis)
+        if ($connection->connect_error) {
+            throw new Exception("Échec de la connexion : " . $connection->connect_error);
+        }
         $connection->set_charset("utf8mb4");
-    } catch (mysqli_sql_exception $e) {
-        // En production, vous pourriez logger cette erreur et afficher un message générique
-        die("Erreur de connexion à la base de données: " . $e->getMessage());
+    } catch (Exception $e) {
+        die("Erreur de connexion : " . $e->getMessage());
     }
         
     // ##############################################
     // GESTION DE LA PAGINATION ET DES FILTRES
     // ##############################################
-    //dev($_POST); dev($_COOKIE);
+    
     // Valeurs par défaut pour les paramètres
     $defaults = [
         'debut' => 1,            // Première ligne à afficher
@@ -41,6 +35,9 @@
         'tri' => 'id',           // Champ de tri par défaut
         'est_en_service' => '1'  // Filtre "en service" par défaut (1 = oui)
     ];
+    
+    
+    $retour = 'liste_selection.php';
     /**
     * Nettoie et valide une entrée utilisateur
     * @param mixed $input La donnée à nettoyer
@@ -105,36 +102,31 @@
     // CONSTRUCTION DE LA REQUÊTE SQL SÉCURISÉE
     // ##############################################
     
-    $whereClauses = [];  // Conditions WHERE
-    $queryParams = [];   // Paramètres pour la requête préparée
-    $types = '';         // Types des paramètres (i = integer, s = string)
+    $whereClauses = ["en_service = 1"];
+    $queryParams = [];
+    $types = '';
     
-    // Construction dynamique de la clause WHERE
     if ($params['lieu_id'] > 0) {
         $whereClauses[] = "lieu_id = ?";
         $queryParams[] = $params['lieu_id'];
-        $types .= 'i';  // Type integer
+        $types .= 'i';
     }
     
     if ($params['cat_id'] > 0) {
         $whereClauses[] = "categorie_id = ?";
         $queryParams[] = $params['cat_id'];
-        $types .= 'i';  // Type integer
+        $types .= 'i';
     }
     
-    // Filtre "en service" (toujours présent)
-    $whereClauses[] = "en_service = ?";
-    $queryParams[] = (int)$params['est_en_service'];
-    $types .= 'i';  // Type string
+    $where = implode(' AND ', $whereClauses);
     
-    //*************
-
-    // Combinaison des conditions WHERE
-    $where = empty($whereClauses) ? '' : 'WHERE ' . implode(' AND ', $whereClauses);
-    dev($where); dev($queryParams); dev($types); 
+    // Validation du champ de tri
+    $allowedSort = ['id', 'ref', 'lieu_id', 'date_verification', 'fabricant'];
+    $sort = in_array($params['tri'], $allowedSort) ? $params['tri'] : 'id';
+    
     try {
         // Requête pour le comptage total
-        $countSql = "SELECT COUNT(*) AS total FROM liste $where";
+        $countSql = "SELECT COUNT(*) AS total FROM liste WHERE $where";
         $countStmt = $connection->prepare($countSql);
         
         if (!empty($queryParams)) {
@@ -146,60 +138,72 @@
         $nblignes = (int)$totalCount;
         $nbpages = ceil($nblignes / max(1, $params['long']));
         
-    } catch (mysqli_sql_exception $e) {
-        die("Erreur lors de l'exécution de la requête: " . $e->getMessage());
-    }
-
-    //**************
-    
-    $types .= 'ii';
-    $queryParams[] = (int)$params['debut'] - 1;
-    $queryParams[] = (int)$params['long'];
-    
-    // Combinaison des conditions WHERE
-    $where = empty($whereClauses) ? '' : 'WHERE ' . implode(' AND ', $whereClauses);
-    
-    // Validation du champ de tri (whitelist)
-    $allowedSort = ['id', 'ref', 'lieu_id', 'date_verification', 'fabricant'];
-    $sort = in_array($params['tri'], $allowedSort) ? $params['tri'] : 'id';
-    
-    // Exécution de la requête principale
-    try {
+        // Requête pour les données paginées
         $sql = "SELECT id, ref, libelle, fabricant, categorie, categorie_id, 
         lieu, lieu_id, nb_elements, date_verification, date_max
-        FROM liste $where ORDER BY $sort LIMIT ?, ?";
+        FROM liste 
+        WHERE $where 
+        ORDER BY $sort 
+        LIMIT ? OFFSET ?";
         
         $stmt = $connection->prepare($sql);
         
-        // Liaison des paramètres si nécessaire
+        $limit = max(1, min($params['long'], 100));
+        $offset = max(0, ($params['debut'] - 1) * $limit);
+        
+        // Fusion des paramètres
+        $allParams = $queryParams;
+        $allParams[] = $limit;
+        $allParams[] = $offset;
+        $allTypes = $types . 'ii';
+        
         if (!empty($queryParams)) {
-            $stmt->bind_param($types, ...$queryParams);
+            $stmt->bind_param($allTypes, ...$allParams);
+        } else {
+            $stmt->bind_param('ii', $limit, $offset);
         }
         
-        // Exécution et récupération des résultats
         $stmt->execute();
         $result = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
-        $nblignes = $params['nblignes'];
-        
-        // Calcul de la pagination
-        $nbpages = ceil($nblignes / $params['long']);
     } catch (mysqli_sql_exception $e) {
-        die("Erreur lors de l'exécution de la requête: " . $e->getMessage());
+        error_log("[" . date('Y-m-d H:i:s') . "] Erreur DB: " . $e->getMessage());
+        die("Une erreur est survenue lors de la récupération des données. Veuillez réessayer.");
     }
     $connection->close();
-//dev($result);
+                
 ?>
 <!DOCTYPE html>
 <html lang="fr">
     <head>
-        <?php include $root.'includes/head.php';?>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Connexion - Gestionnaire EPI</title>
+        <?php include $root.'includes/bandeau.php'; ?>
     </head>
+    
     <body>
+        <!-- En-tête avec statut de connexion -->
         <header style="text-align: right; padding: 10px;">
-            <?php include $root.'includes/bandeau.php';?>
+            <?php if ($isLoggedIn): ?>
+            <form action="index.php" method="post" style="display: inline;">
+                <?php echo $connect; ?>
+                <button type="submit" name="deconnexion" class="btn btn-link">Déconnexion</button>
+            </form>
+            <?php else: ?>
+            <a href="login.php" class="btn btn-primary">Connexion</a>
+            <?php endif; ?>
         </header>
+        <hr>
         
-        <?php include $root.'includes/en_tete.php';?>
+        <!-- Logo et titre -->
+                <table>
+                    <tr>
+                        <td align="left"><img src="images/EPIClub.png" alt="Logo EPIClub" width="100" class="img-fluid"></td>
+                        <td align="center"><h1>Gestionnaire EPI</h1></td>
+                        <td align="right"><img src="images/logo.png" width="150" alt="Logo Périgord Escalade" class="img-fluid"></td>
+                    </tr>
+                </table>
+        <hr>
         
         <?php if ($isLoggedIn): ?>
         <!-- Formulaire de filtrage -->
@@ -212,6 +216,7 @@
                         <th colspan="3">Filtrer par :</th>
                         <th colspan="2">Trier par :</th>
                         <th>Nb de lignes par feuille:</th>
+                        <th>Première ligne :</th>
                     </tr>
                     <tr>
                         <td>Lieu</td>
@@ -228,6 +233,9 @@
                         </td>
                         <td colspan="2" rowspan="2">
                             <input type="number" name="long" min="5" max="<?= min($nblignes + $params['long'], $params['long']*($nbpages+1)) ?>" step="5" value="<?= $params['long'] ?>">
+                        </td>
+                        <td rowspan="2">
+                            <input type="number" name="debut" min="1" step="<?= $params['long'] ?>" max="<?= max($nblignes, $nbpages*$params['long'],1) ?>" value="<?= $params['debut'] ?>">
                         </td>
                     </tr>
                     <tr>
@@ -260,7 +268,7 @@
         <hr>
         <h3>Liste</h3>
         
-        <form method="post">
+        <form method="post" action="fiche_verif.php">
             <table>
                 <thead>
                     <tr>
@@ -276,19 +284,19 @@
                     </tr>
                 </thead>
                 <tbody>
-                    <?php foreach ($result as $key => $value): ?>
+                    <?php for ($i = $params['debut']; $i < min($params['debut'] + $params['long'], $nblignes); $i++): ?>
                     <tr>
-                        <td><input type="radio" name="id" value="<?= $value['id'] ?>"></td>
-                        <td><?= htmlspecialchars($value['ref']) ?></td>
-                        <td><?= htmlspecialchars($value['libelle']) ?></td>
-                        <td><?= htmlspecialchars($value['fabricant']) ?></td>
-                        <td><?= htmlspecialchars($value['categorie']) ?></td>
-                        <td><?= htmlspecialchars($value['lieu']) ?></td>
-                        <td><?= htmlspecialchars($value['nb_elements']) ?></td>
-                        <td><?= htmlspecialchars($value['date_verification']) ?></td>
-                        <td><?= htmlspecialchars($value['date_max']) ?></td>
+                        <td><input type="radio" name="id" value="<?= $result[$i]['id'] ?>"></td>
+                        <td><?= htmlspecialchars($result[$i]['ref']) ?></td>
+                        <td><?= htmlspecialchars($result[$i]['libelle']) ?></td>
+                        <td><?= htmlspecialchars($result[$i]['fabricant']) ?></td>
+                        <td><?= htmlspecialchars($result[$i]['categorie']) ?></td>
+                        <td><?= htmlspecialchars($result[$i]['lieu']) ?></td>
+                        <td><?= htmlspecialchars($result[$i]['nb_elements']) ?></td>
+                        <td><?= htmlspecialchars($result[$i]['date_verification']) ?></td>
+                        <td><?= htmlspecialchars($result[$i]['date_max']) ?></td>
                     </tr>
-                    <?php endforeach; ?>
+                    <?php endfor; ?>
                 </tbody>
             </table>
             
@@ -305,9 +313,9 @@
             
             <p></p>
             <input type="hidden" name="action" value="affichage">                
-            <input type="hidden" name="appel_liste" value="1">              
-            <input type="hidden" name="long" value="<?= $params['long'] ;?>">
+            <input type="hidden" name="appel_liste" value="1">
             <input type="submit" class="btn btn-primary btn-block" name="submit" value="Afficher la fiche">
+            <input type="hidden" name="retour" value="<?= $retour ?>" >
             <a href="index.php">
                 <input type="button" class="btn btn-primary btn-block"value="Revenir à l'accueil">
             </a>

@@ -1,133 +1,104 @@
 <?php
-session_start();
-  
-require "config.php";  
-include $root."includes/header.php";
-
-if (isset($_POST['deconnexion'])) {$_SESSION=array();};
-
-  # #############################
-  # verification connexion
-  # #############################
-  
-  
-  if (count($_SESSION) > 0)	
-    {
-      $connect = "Connecté comme ".$_SESSION['pseudo']." : ";
+        
+    require __DIR__ . '/config.php';
+    require $root . 'includes/common.php';
+    
+    if ($isLoggedIn) {
+        $controle = $_SESSION['controle_en_cours'] ? "liste_controle.php" : "controle_creation.php" ;
+        $facture = $_SESSION['facture_en_saisie'] ? "liste_facture.php" : "facture_creation.php" ;
     }
-  else
-    {
-      $connect = "Déconnecté";
-    }
-
-  if (count($_SESSION) > 0)	
-    {
-      $connect = "Connecté comme ".$_SESSION['pseudo']." : ";
-    }
-  else
-    {
-      $connect = "Déconnecté";
-    }
-
-  ##############################
-  # INITIALISATION VARIABLES
-  #############################
-  
-  $debut = 0 ; $long = 20; $nblignes = 0;
-  if (isset($_POST['debut'])) {$debut = $_POST['debut']-1;};
-  if (isset($_POST['long'])) {$long = $_POST['long'];};
-  if (isset($_POST['nblignes'])) {$nblignes = $_POST['nblignes'];};
-
 ?>
 
-
-
-<!--# #############################-->
-<!--# Code HTML-->
-<!--# #############################-->
-
-<body><p>
-  <?php 
-    if (count($_SESSION) > 0)
-  { ?>
-  <form action="index.php" method="post"><?php echo $connect." "; ?><input type='submit' name="deconnexion" value="Déconnexion"></form><?php  
-    }
-    else 
-  { ?>
-  <a href=login.php>Connection</a><?php
-    }
-  ?></p>
-  <hr>
-  <table>
-    <tr>
-      <td> <h1>Gestionnaire EPI</h1></td><td rowspan=2><img src="images/logo.png" width="200"></td>
-    </tr>
-    <tr><td><h2>Périgord Escalade</h2></td></tr>
-  </table>
-
-<hr>
-
-<!-- Test si connecté debut -->
-<?php if (count($_SESSION) > 0)
-  { 
-?>
-<!---->
-  
-<h3>Gestionnaire (minimaliste) des EPI</h3>
-  <p></p>
-    <table>
-      <tr>
-        <td>
-        <form action="fiche_creation.php" method="post">
-          <input type="hidden" name='appel_liste' value=0>
-          <input type="hidden" name='id' value='0'>  
-          <input type="hidden" name='action' value='creation'>
-          <input type="submit" name='submit' value="Créer une nouvelle fiche">
-          <input type="hidden" name='debut' value=<?php echo $debut; ?>>
-          <input type="hidden" name='long' value=<?php echo $long; ?>>
-          <input type="hidden" name='nblignes' value=<?php echo $nblignes; ?>>
-      </form>
-    </td>
-        <td> 
-          <form action="liste_selection.php" method="post">
-            <input type="submit" name='submit' value="Consulter la liste des EPI">
-            <input type="hidden" name='debut' value=<?php echo $debut; ?>>
-            <input type="hidden" name='long' value=<?php echo $long; ?>>
-            <input type="hidden" name='nblignes' value=<?php echo $nblignes; ?>>
-        </form>
-      </td>
-      </tr>
-      <tr>
-      <td> 
-          <form action="verification_creer.php" method="post">
-            <input type="hidden" name='action' value='creation'>
-            <input type="submit" name='submit' value="Créer une vérification">
-            <input type="hidden" name='debut' value=<?php echo $debut; ?>>
-            <input type="hidden" name='long' value=<?php echo $long; ?>>
-            <input type="hidden" name='nblignes' value=<?php echo $nblignes; ?>>
-          </form>
-      </td>
-      <td>
-        <form action="facture_creation.php" method="post">
-          <input type="hidden" name='action' value='creation'>
-          <input type="submit" name='submit' value="Créer une facture">
-          <input type="hidden" name='debut' value=<?php echo $debut; ?>>
-          <input type="hidden" name='long' value=<?php echo $long; ?>>
-          <input type="hidden" name='nblignes' value=<?php echo $nblignes; ?>>
-        </form>
-      </td>
-    </tr>
-
-<p></p>
-<p></p>
-<p></p>
-<p></p>
-<!-- Test si connecté fin -->
-<?php 
-}
-  else { ?>
-  <p>Tu n'es pas connecté</p>
-  <?php 
-  }?>
-<!---->
-<?php include "includes/footer.php"; ?>
+<!DOCTYPE html>
+<html lang="fr">
+    <head>
+        <?php include $root.'includes/head.php';?>
+    </head>
+    <body>
+        <header style="text-align: right; padding: 10px;">
+            <?php include $root.'includes/bandeau.php';?>
+        </header>
+        
+        <?php include $root.'includes/en_tete.php';?>
+        
+        <?php if ( !$isLoggedIn): ?>
+        <h3>Version de test</h3>
+        <p>
+            Pour vous connecter comme controleur EPI :<br>
+            login : usager mdp : usager
+        </p>
+        <p>
+            Pour vous connecter comme admin EPI :<br>
+            login : admin mdp : admin
+        </p> 
+        <p>
+            Reste à implémenter la lecture des journaux et la génération de qrcodes pour le contrôle.
+        </p>
+        <hr>
+        <?php endif; ?>
+        <?php if (count($_SESSION) > 0): ?>
+        <main class="container">
+            <h3>Accueil</h3>
+            
+            <div class="row mt-4">
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-body">
+                            <h5 class="card-title">Consultation</h5>
+                            <p>
+                                <?php if ($isLoggedIn and ($_SESSION['role'] == 'admin') and false): ?>    
+                                <form action="fiche_creation.php" method="post" class="mb-3">
+                                    <input type="hidden" name="appel_liste" value="0">
+                                    <input type="hidden" name="id" value="0">  
+                                    <input type="hidden" name="action" value="creation">
+                                    <input type="hidden" name="csrf_token" value="<?= $_SESSION['csrf_token'] ?>">
+                                    <input type="hidden" name="retour" value="index.php">
+                                    <button type="submit" class="btn btn-primary btn-block">Créer une nouvelle fiche</button>
+                                </form>
+                                <?php endif; ?>
+                            </p>
+                            <p>
+                                <form action="liste_selection.php" method="post">
+                                    <button type="submit" class="btn btn-primary btn-block">Consulter la liste des EPI</button>
+                                </form>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                <?php if ($isLoggedIn): ?>                
+                <div class="col-md-6">
+                    <h5 class="card-title">Autres fonctionnalités</h5>
+                    <p><form action="<?= $controle; ?>" method="post" class="mb-3">
+                        <input type="hidden" name="action" value="creation">
+                        <input type="hidden" name="id" value="<?= $_SESSION['controle_en_cours']; ?>"> 
+                        <input type="hidden" name="csrf_token" value="<?= $_SESSION['csrf_token'] ?>">
+                        <button type="submit"  class="btn btn-primary btn-block">Contrôler les EPI</button>
+                    </form>
+                    </p>
+                    <?php if ($_SESSION['role'] == 'admin'): ?>
+                    <p>
+                        <form action="<?= $facture; ?>" method="post">
+                            <input type="hidden" name="action" value="creation">
+                            <input type="hidden" name="csrf_token" value="<?= $_SESSION['csrf_token'] ?>">
+                            <button type="submit"  class="btn btn-primary btn-block">Saisir une facture</button>
+                        </form>
+                    </p>
+                    <?php endif; ?>
+                </div>
+                <?php endif; ?>
+            </div>
+        </main>
+        <?php else: ?>
+        <div class="container text-center">
+            <div class="alert alert-warning">
+                <p>Vous n'êtes pas connecté</p>
+                <a href="login.php" class="btn btn-primary">Se connecter</a>
+            </div>
+        </div>
+        <?php endif; ?>
+        
+    </body>
+    <footer>
+        <?php include $root . 'includes/bandeau_bas.php'; ?>
+    </footer>
+</html>
