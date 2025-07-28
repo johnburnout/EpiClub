@@ -202,8 +202,7 @@
         'id' => (int)$donnees['id'],
         'retour' => $donnees['retour'],
         'isEditMode' => $validation === 'maj',
-        'isNewMode' => $validation === 'creation',
-        'hasPhoto' => ($donnees['photo'] ?? '') !== 'null.jpeg'
+        'isNewMode' => $validation === 'creation'
     ];
     //htmlspecialchars(var_dump($viewData['date_debut']), ENT_QUOTES, 'UTF-8');
 ?>
@@ -246,10 +245,8 @@
                             <label for="reference">Référence :</label>
                             <input type="text" name="reference" required value="<?= $viewData['reference'] ?>">
                         </td>
-                        <td rowspan="<?= $viewData['hasPhoto'] ? '8' : '7' ?>">
-                            <?php if ($viewData['hasPhoto']): ?>
+                        <td rowspan="8">
                             <img src="images/<?= $viewData['photo'] ?>" class="epi-photo" alt="Photo du matériel" width="400">
-                            <?php endif; ?>
                             <br>
                             <input type="file" class="btn btn-secondary" name="monfichier" accept="image/jpeg,image/png,image/gif">
                         </td>
@@ -284,14 +281,6 @@
                             <?= $viewData['fabricant_id'] ?>
                         </td>
                     </tr>
-                    <?php if ($viewData['hasPhoto']): ?>
-                    <!--                <tr>
-                    <td>
-                    <label for="photo">Nom du fichier photo:</label>
-                    <input type="text" name="photo" value="<?= $viewData['photo'] ?>" readonly>
-                    </td>
-                    </tr> -->
-                    <?php endif; ?>
                     <tr>
                         <td colspan="1">
                             <label for="nb_elements_initial">Nombre d'éléments :</label>

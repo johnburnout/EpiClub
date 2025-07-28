@@ -220,7 +220,6 @@
                         <td>Libellé:</td>
                         <td><?= htmlspecialchars($donnees['libelle'], ENT_QUOTES, 'UTF-8') ?></td>
                     </tr>
-                    <?php if ($donnees['photo'] != 'null.jpeg'): ?>
                     <tr>
                         <td>Photo:</td>
                         <td>
@@ -229,7 +228,6 @@
                                 alt="Photo du matériel" width="300">
                         </td>
                     </tr>
-                    <?php endif; ?>
                     <tr>
                         <td>Lieu:</td>
                         <td>
