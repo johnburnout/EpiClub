@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: localhost
--- Generation Time: Jul 27, 2025 at 05:02 PM
+-- Generation Time: Jul 26, 2025 at 08:39 AM
 -- Server version: 10.11.11-MariaDB-0+deb12u1
 -- PHP Version: 8.2.28
 
@@ -55,7 +55,6 @@ CREATE TABLE `facture` (
   `date_facture` date DEFAULT NULL,
   `en_saisie` tinyint(1) NOT NULL DEFAULT 1,
   `reference` varchar(15) DEFAULT NULL,
-  `fichier` varchar(50) NOT NULL DEFAULT 'null.jpg',
   `libelle` varchar(30) GENERATED ALWAYS AS (concat_ws(' ',`vendeur`,`date_facture`)) VIRTUAL,
   `utilisateur` varchar(30) NOT NULL DEFAULT '""'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb3 COLLATE=utf8mb3_general_ci;
@@ -173,7 +172,6 @@ CREATE TABLE `utilisateur` (
   `id` int(11) NOT NULL,
   `username` varchar(16) DEFAULT NULL,
   `role` enum('usager','admin') NOT NULL DEFAULT 'usager',
-  `dev` tinyint(1) NOT NULL DEFAULT 0,
   `is_active` tinyint(4) NOT NULL DEFAULT 1,
   `email` varchar(255) DEFAULT NULL,
   `password` varchar(32) DEFAULT NULL,

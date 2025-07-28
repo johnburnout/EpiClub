@@ -105,6 +105,15 @@
                 
                 $stmt->close();
                 $mysqli->close();
+                $cookie_options = [
+                    'expires' => time() + 86400,
+                    'path' => '/',
+                    'secure' => true,
+                    'httponly' => true,
+                    'samesite' => 'Strict'
+                ];
+                setcookie('dev', $_SESSION['dev'], $cookie_options);
+                
             } catch (mysqli_sql_exception $e) {
                 error_log("Login error: ".$e->getMessage());
                 $error_message = "Erreur système. Veuillez réessayer.";
