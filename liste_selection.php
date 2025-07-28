@@ -4,7 +4,7 @@
     require $root.'includes/common.php';  // Fonctions communes
     
     if (isset($_POST['id'])) {
-        header('Location: fiche_controle.php?id='.$_POST['id'].'&action=affichage&retour=liste_selection.php');
+        header('Location: fiche_verif.php?id='.$_POST['id'].'&action=affichage&retour=liste_selection.php');
         exit();
     };
     

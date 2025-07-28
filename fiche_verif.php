@@ -218,8 +218,7 @@
         'nb_elements_initial' => (int)($donnees['nb_elements_initial'] ?? 1),
         'action' => htmlspecialchars($action, ENT_QUOTES, 'UTF-8'),
         'id' => (int)$donnees['id'],
-        'isEditMode' => true,
-        'hasPhoto' => ($donnees['photo'] ?? '') !== 'null.jpeg'
+        'isEditMode' => true
     ];
     //var_dump($viewData);
 ?>
@@ -262,12 +261,10 @@
                             <label for="reference">Référence :</label>
                             <input type="text" name="reference" required value="<?= $viewData['reference'] ?>">
                         </td>
-                        <td rowspan="<?= $viewData['hasPhoto'] ? '10' : '9' ?>">
-                            <?php if ($viewData['hasPhoto']): ?>
+                        <td rowspan="10">
                             <img src="images/<?= $viewData['photo'] ?>" class="epi-photo" alt="Photo du matériel" width="400">
-                            <?php endif; ?>
                             <br>
-                            <input type="file" class="btn btn-secondary" name="monfichier" accept="image/jpeg,image/png,image/gif">
+                            <input type="file" name="monfichier" accept="image/jpeg,image/png,image/gif">
                         </td>
                     </tr>
                     <tr>
@@ -312,14 +309,6 @@
                             <?= $viewData['fabricant_id'] ?>
                         </td>
                     </tr>
-                    <?php if ($viewData['hasPhoto']): ?>
-                    <!--                <tr>
-                    <td>
-                    <label for="photo">Nom du fichier photo:</label>
-                    <input type="text" name="photo" value="<?= $viewData['photo'] ?>" readonly>
-                    </td>
-                    </tr> -->
-                    <?php endif; ?>
                     <tr>
                         <td colspan="1">
                             <label for="nb_elements_initial">Nombre d'éléments :</label>
