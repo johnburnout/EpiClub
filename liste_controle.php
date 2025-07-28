@@ -113,7 +113,7 @@
     }
     
     if ($params['cat_id'] > 0) {
-        $whereClauses[] = "categorie_id = ?";
+        $whereClauses[] = "id = ?";
         $queryParams[] = $params['cat_id'];
         $types .= 'i';
     }
